@@ -175,14 +175,14 @@ const HEADLINES = [   /* [이 자막부터, 분야, 헤드라인] */
   [10, "사회", "‘악마의 정육면체’ 큐브관은 어떤 곳?"],
   [12, "사회", "경찰, 정확한 사망 경위 수사 중"]
 ];
-/* 자막: [시작초, 끝초, 문장] — 녹음 파일의 실제 쉼과 음절에 맞춤. 태블릿에서 #sync로 다시 맞출 수 있음 */
+/* 자막: [시작초, 끝초, 문장] — 나레이션 파일 기준 시간(나레이션 0초 = 첫 마디). 문장 끝의 긴 쉼에 맞춤. 태블릿에서 #sync로 다시 맞출 수 있음 */
 let CAPTIONS = [
-  [3.3,  6.5,  "2030년 8월 21일, 저녁 뉴스입니다."],
-  [6.6,  8.6,  "먼저 환경 소식입니다."],
-  [8.7,  14.2, "최근 2년 사이 대기오염이 크게 심해지면서, 하늘을 볼 수 있는 거리가 눈에 띄게 줄었습니다."],
-  [14.25,18.8, "낮에도 햇빛이 점점 흐려져, 도시마다 조명을 늘려 어둠을 메우고 있습니다."],
-  [18.85,22.8, "밤에는 달빛과 별빛이 더 이상 땅에 닿지 못할 만큼 약해졌습니다."],
-  [23.6, 28.4, "올해부터 인류는, 달도 별도 볼 수 없는 시대를 맞았습니다."],
+  [0.0, 3.2, "2030년 8월 21일, 저녁 뉴스입니다."],
+  [3.3, 5.3, "먼저 환경 소식입니다."],
+  [5.4, 12.0, "최근 2년 사이 대기오염이 크게 심해지면서, 하늘을 볼 수 있는 거리가 눈에 띄게 줄었습니다."],
+  [12.1, 17.7, "낮에도 햇빛이 점점 흐려져, 도시마다 조명을 늘려 어둠을 메우고 있습니다."],
+  [17.8, 23.5, "밤에는 달빛과 별빛이 더 이상 땅에 닿지 못할 만큼 약해졌습니다."],
+  [23.6, 28.6, "올해부터 인류는, 달도 별도 볼 수 없는 시대를 맞았습니다."],
   [29.5, 30.9, "다음은 사회 소식입니다."],
   [31.6, 36.6, "강원도 폐광 지대에 있는 건축물, 「큐브관」에서 시신 여섯 구가 발견됐습니다."],
   [37.3, 46.3, "경찰 조사 결과, 숨진 이들은 며칠 전 함께 큐브관을 찾았던 남성 세 명과 여성 세 명으로, 생존자는 없는 것으로 확인됐습니다."],
@@ -193,40 +193,52 @@ let CAPTIONS = [
   [71.2, 74.2, "「큐브관 사건」 수사 소식은 계속 전해드리겠습니다."]
 ];
 /* 태블릿에서 맞춘 시간이 있으면 그걸 씀 */
-try{ const saved=JSON.parse(localStorage.getItem("cube_caps")||"null");
+try{ const saved=JSON.parse(localStorage.getItem("cube_caps_v2")||"null");
   if(Array.isArray(saved)&&saved.length===CAPTIONS.length) saved.forEach((v,k)=>{CAPTIONS[k][0]=v[0];CAPTIONS[k][1]=v[1];}); }catch(e){}
 /* 뉴스 배경음악: 앞부분은 크게, 말하는 동안 작게, 끝나면 살짝 올렸다가 사라짐 */
 const NB = new Audio("bgm/news_bgm.mp3"); NB.preload="auto"; NB.loop=false; NB.volume=0;
-const NB_LOUD=.85, NB_UNDER=.13; let VOICE_START=CAPTIONS[0][0], VOICE_END=CAPTIONS[CAPTIONS.length-1][1];
-function nbTarget(t){
-  if(t < VOICE_START-0.6) return NB_LOUD;
-  if(t < VOICE_START)     return NB_LOUD + (NB_UNDER-NB_LOUD)*((t-(VOICE_START-0.6))/0.6);
-  if(t < VOICE_END)       return NB_UNDER;
-  if(t < VOICE_END+2.5)   return NB_UNDER + (.5-NB_UNDER)*((t-VOICE_END)/2.5);
-  if(t < VOICE_END+7)     return .5*(1-(t-VOICE_END-2.5)/4.5);
+const NB_LOUD=.85, NB_UNDER=.13, NEWS_INTRO=3.0;   /* 배경음악만 나오는 시간(초) */
+let VOICE_END=CAPTIONS[CAPTIONS.length-1][1];
+let newsT0=0, newsTimer=null, newsVoice=null, nbRaf=null;
+function nbTarget(nt){            /* nt: 뉴스 장면 시작 후 지난 시간 */
+  const vt=nt-NEWS_INTRO;         /* 나레이션 시간 */
+  if(nt < NEWS_INTRO-0.7) return NB_LOUD;
+  if(vt < 0)               return NB_LOUD + (NB_UNDER-NB_LOUD)*((nt-(NEWS_INTRO-0.7))/0.7);
+  if(vt < VOICE_END)       return NB_UNDER;
+  if(vt < VOICE_END+2.5)   return NB_UNDER + (.5-NB_UNDER)*((vt-VOICE_END)/2.5);
+  if(vt < VOICE_END+7)     return .5*(1-(vt-VOICE_END-2.5)/4.5);
   return 0;
 }
-let nbRaf=null, newsVoice=null;
 function nbLoop(){
   if(!newsVoice){ nbRaf=null; return; }
-  const t = newsVoice.ended ? VOICE_END+8 : newsVoice.currentTime;
-  NB.volume=Math.max(0,Math.min(1,nbTarget(t)));
-  if(t>VOICE_END+7){ NB.pause(); nbRaf=null; return; }
+  const nt=(performance.now()-newsT0)/1000;
+  NB.volume=Math.max(0,Math.min(1,nbTarget(nt)));
+  if(nt-NEWS_INTRO>VOICE_END+7){ NB.pause(); nbRaf=null; return; }
   nbRaf=requestAnimationFrame(nbLoop);
 }
 function newsStart(voice){
-  newsVoice=voice; NB.currentTime=0; NB.volume=NB_LOUD;
-  NB.play().catch(()=>{}); if(!nbRaf) nbRaf=requestAnimationFrame(nbLoop);
+  newsVoice=voice; newsT0=performance.now();
+  NB.currentTime=0; NB.volume=NB_LOUD; NB.play().catch(()=>{});
+  if(!nbRaf) nbRaf=requestAnimationFrame(nbLoop);
+  clearTimeout(newsTimer);
+  newsTimer=setTimeout(()=>{ if(newsVoice!==voice) return;
+    voice.currentTime=0; voice.volume=VOL;
+    voice.play().catch(()=>toast("뉴스 파일(bgm/news.mp3)을 재생하지 못했습니다."));
+  }, NEWS_INTRO*1000);
 }
 function newsStop(){
-  newsVoice=null; if(nbRaf){cancelAnimationFrame(nbRaf); nbRaf=null;}
+  clearTimeout(newsTimer); newsVoice=null; if(nbRaf){cancelAnimationFrame(nbRaf); nbRaf=null;}
   ramp(NB,0,1500,()=>NB.pause());
   const c=document.getElementById("nCap"); c.classList.add("off");
 }
 let capIdx=-2;
 function syncCaption(a){
   const t=a.currentTime; let k=-1;
-  for(let j=0;j<CAPTIONS.length;j++) if(t>=CAPTIONS[j][0]&&t<CAPTIONS[j][1]) k=j;
+  for(let j=0;j<CAPTIONS.length;j++){
+    const nextStart = j+1<CAPTIONS.length ? CAPTIONS[j+1][0] : Infinity;
+    const end = (nextStart-CAPTIONS[j][1] < 1.0) ? nextStart : CAPTIONS[j][1];
+    if(t>=CAPTIONS[j][0]&&t<end) k=j;
+  }
   if(k===capIdx) return; capIdx=k;
   const c=document.getElementById("nCap");
   if(k<0){ c.classList.add("off"); return; }
@@ -278,11 +290,8 @@ function playTrack(key){
   a.loop = key!=="news";
   a.ontimeupdate = key==="news" ? ()=>{ syncHeadline(a); syncCaption(a); } : null;
   a.currentTime=0; a.volume=0;
-  if(key==="news"){ capIdx=-2; newsStart(a); }
-  a.play().then(()=>ramp(a,VOL, key==="news"?400:FADE)).catch(()=>{
-    if(key==="news") toast("뉴스 파일(bgm/news.mp3)이 아직 없습니다.");
-    else toast("음악을 재생하지 못했습니다. 화면을 한 번 더 눌러주세요.");
-  });
+  if(key==="news"){ capIdx=-2; a.pause(); newsStart(a); return; }
+  a.play().then(()=>ramp(a,VOL,FADE)).catch(()=>toast("음악을 재생하지 못했습니다. 화면을 한 번 더 눌러주세요."));
 }
 
 /* ---------- 장면 ---------- */
@@ -345,12 +354,12 @@ if(location.hash==="#sync"){
   };
   const finish=()=>{
     const out=CAPTIONS.map((c,i)=>{ const st=marks[i]; const en= i+1<marks.length? marks[i+1]-0.1 : st+(c[1]-c[0]); return [Math.round(st*10)/10, Math.round(en*10)/10]; });
-    localStorage.setItem("cube_caps",JSON.stringify(out));
+    localStorage.setItem("cube_caps_v2",JSON.stringify(out));
     const code=out.map((v,i)=>`  [${v[0].toFixed(1)}, ${v[1].toFixed(1)}, "${CAPTIONS[i][2]}"]`).join(",\n");
     box.innerHTML=`<b>저장했습니다.</b> 이 태블릿에서는 이제 이 시간으로 자막이 나옵니다. 다른 기기에도 쓰려면 아래 내용을 index.html의 CAPTIONS에 붙여넣으세요.<textarea readonly>${code}</textarea>
       <div class="row"><button id="sAgain">다시 맞추기</button><button id="sReset">원래대로 되돌리기</button><button id="sDone">끝내기</button></div>`;
     $("sAgain").onclick=e=>{e.stopPropagation(); location.reload();};
-    $("sReset").onclick=e=>{e.stopPropagation(); localStorage.removeItem("cube_caps"); toast("원래 시간으로 되돌렸습니다."); };
+    $("sReset").onclick=e=>{e.stopPropagation(); localStorage.removeItem("cube_caps_v2"); toast("원래 시간으로 되돌렸습니다."); };
     $("sDone").onclick=e=>{e.stopPropagation(); location.hash=""; location.reload();};
   };
   const onTap=e=>{
