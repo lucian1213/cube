@@ -893,17 +893,17 @@ function lFrame(){
     if(k<0) c.classList.add("off"); else { c.textContent=LETTER_CAPS[k][2]; c.classList.remove("off"); } }
   /* 그림 */
   if(started){ let n=0; for(let j=0;j<LETTER_IMG_AT.length;j++) if(t>=imgStart(j)-0.6) n=j; lShow(n); }
-  /* 배경음악: 잦아드는 지점에서 다음 바퀴를 겹쳐 시작 (편지가 끝난 뒤에는 더 잇지 않음) */
+  /* 배경음악: 잦아드는 지점에서 다음 바퀴를 겹쳐 시작. 편지가 끝난 뒤 제목 화면에서도 계속 이어짐 */
   const cur=LMS[lmCur];
-  if(!lmLooped && !LV.ended && cur.currentTime>=LM_LOOP_AT){ lmLooped=true; const nk=1-lmCur; const nx=LMS[nk]; nx.currentTime=0; nx.volume=0; nx.play().catch(()=>{}); lmCur=nk; }
+  if(!lmFadeOut && cur.currentTime>=LM_LOOP_AT){ const nk=1-lmCur; const nx=LMS[nk]; nx.currentTime=0; nx.volume=lmLevel; nx.play().catch(()=>{}); lmCur=nk; }   /* 새 바퀴가 현재 곡이 되므로 다음 바퀴도 같은 조건으로 이어짐 */
   /* 말할 때는 작게, 쉴 때와 편지가 끝난 뒤에는 크게 */
   const speaking = k>=0 && t>=LETTER_CAPS[k][0] && t<=LETTER_CAPS[k][1];
-  const target = lmFadeOut ? 0 : (LV.ended ? .7 : (!started ? .45 : (speaking ? .3 : .45)));
+  const target = lmFadeOut ? 0 : (LV.ended ? .5 : (!started ? .45 : (speaking ? .3 : .45)));
   lmLevel += (target-lmLevel)*(lmFadeOut?0.012:0.05);
   LMS.forEach(a=>{ if(!a.paused){ a.volume=Math.max(0,Math.min(1,lmLevel)); if(lmFadeOut&&lmLevel<0.01) a.pause(); } });
 }
 LV.addEventListener("ended",()=>{ if(lOn) setTimeout(()=>{ if(!lOn) return;
-  document.getElementById("endcard").classList.add("on"); lmFadeOut=true; }, 5000); });
+  document.getElementById("endcard").classList.add("on"); }, 5000); });   /* 제목 화면에서도 음악은 계속 이어짐 (맺음말 배경) */
 
 /* ---------- 음원을 못 불러오면 어떤 파일인지 알려줌 ---------- */
 function watchAudio(a){ a.addEventListener("error",()=>{ const f=(a.currentSrc||a.src||"").split("/").slice(-2).join("/");
