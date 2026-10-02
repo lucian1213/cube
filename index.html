@@ -111,8 +111,15 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .ans .fig{min-height:0;display:flex;align-items:center;justify-content:center}
 .ans .fig svg{width:100%;height:100%;max-height:100%}
 .ans .tx{min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
-.ans .q{color:var(--acc);font-weight:800;line-height:1.45;margin-bottom:.9em;word-break:keep-all}
-.ans .a{line-height:1.75;word-break:keep-all;color:var(--star)}
+.ans .q{color:var(--acc);font-weight:800;line-height:1.5;margin-bottom:1.1em;word-break:keep-all;font-size:clamp(19px,1.85vw,32px)}
+.ans .a{word-break:keep-all;color:var(--star);font-size:clamp(17px,1.62vw,28px);line-height:1.85}
+.ans .a p{margin:0 0 .95em}
+.ans .a p:last-child{margin-bottom:0}
+.ans .a{transition:opacity .18s ease}
+.ans .tx{justify-content:flex-start;padding-top:1vh}
+.ans .more{position:absolute;right:4vw;bottom:calc(env(safe-area-inset-bottom,0px) + 2.4vh);color:var(--acc);font-weight:700;
+  font-size:clamp(13px,1.2vw,18px);letter-spacing:.06em;opacity:.85}
+.ans .more[hidden]{display:none}
 #letter{position:absolute;inset:0;z-index:2;background:#000;opacity:0;pointer-events:none;transition:opacity 1.6s ease;overflow:hidden}
 .stage.letter #letter{opacity:1}
 .stage.letter .brand,.stage.letter .title-wrap,.stage.letter canvas#flies,.stage.letter .veil{opacity:0}
@@ -180,6 +187,7 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   <div class="ans" id="ans" aria-live="polite">
     <div class="hd"><span class="badge" id="aBadge"></span><span class="rd" id="aRound"></span><span class="ct" id="aTitle"></span></div>
     <div class="bd"><div class="fig" id="aFig"></div><div class="tx" id="aTx"><div class="q" id="aQ"></div><div class="a" id="aA"></div></div></div>
+    <div class="more" id="aMore" hidden>다음 장에 이어집니다 ▶</div>
   </div>
   <div class="toast" id="toast"></div>
   <div class="sync" id="sync" hidden></div>
@@ -589,26 +597,64 @@ const DG = (function(){
 })();
 
 const ROUND={A:["첫 번째 해답","#d8c53f"],B:["두 번째 해답","#6f9be8"],C:["세 번째 해답","#d0645a"]};
-function showAnswer(s){
+/* 해답 글: 문장을 2~3개씩 묶어 문단으로, 화면에 맞춰 여러 장으로 나눔 */
+const LINKERS=/^(그런데|하지만|그러나|그다음|다만|마지막으로|이때|그래서|따라서|결국|그러면|게다가|또|그리고|즉|이 수법|이렇게|여기서|사실)/;
+function toParagraphs(text){
+  const sents=text.match(/[^.?!]+[.?!]+["”」』)]*\s*|[^.?!]+$/g)||[text];
+  const paras=[]; let buf="";
+  for(const raw of sents){ const t=raw.trim(); if(!t) continue;
+    if(buf && (buf.length>95 || LINKERS.test(t))){ paras.push(buf.trim()); buf=""; }
+    buf+=(buf?" ":"")+t; }
+  if(buf) paras.push(buf.trim());
+  return paras;
+}
+let ansPages=[], ansPage=0, ansScene=null;
+function showAnswer(s, atEnd){
   const [rname,acc]=ROUND[s.answer[0]]; const box=document.getElementById("ans");
   box.style.setProperty("--acc",acc);
   document.getElementById("aBadge").textContent="해답 "+s.answer;
   document.getElementById("aRound").textContent=rname;
   document.getElementById("aTitle").textContent=s.case;
   document.getElementById("aFig").innerHTML=DG.draw(s.answer,acc);
-  const [q,a]=ANSWERS[s.answer][s.part];
-  const qe=document.getElementById("aQ"), ae=document.getElementById("aA");
-  qe.textContent = q ? (s.parts>1?`수수께끼 ${s.part+1}. `:"")+q : ""; qe.style.display=q?"":"none";
-  ae.textContent=a; fitAnswer();
+  ansScene=s; paginateAnswer(); ansPage = atEnd ? ansPages.length-1 : 0; renderAnswerPage();
 }
-function fitAnswer(){
-  const tx=document.getElementById("aTx"), qe=document.getElementById("aQ"), ae=document.getElementById("aA");
-  let fs=Math.min(window.innerWidth*0.021, 34);
-  const min=Math.max(12, window.innerWidth*0.0105);
-  do{ ae.style.fontSize=fs+"px"; qe.style.fontSize=(fs*1.06)+"px"; fs-=0.5; }
-  while(fs>min && (tx.scrollHeight>tx.clientHeight+2));
+function qText(s){ const q=ANSWERS[s.answer][s.part][0]; return q ? (s.parts>1?`수수께끼 ${s.part+1}. `:"")+q : ""; }
+function paginateAnswer(){
+  const s=ansScene, tx=document.getElementById("aTx"), qe=document.getElementById("aQ"), ae=document.getElementById("aA");
+  const paras=toParagraphs(ANSWERS[s.answer][s.part][1]);
+  const q=qText(s); ansPages=[]; let page=[], first=true;
+  const setup=(withQ)=>{ qe.textContent=withQ?q:""; qe.style.display=(withQ&&q)?"":"none"; ae.innerHTML=""; };
+  setup(true);
+  const fits=()=>tx.scrollHeight<=tx.clientHeight+1;
+  const queue=[...paras];
+  while(queue.length){
+    const p=queue.shift(); const el=document.createElement("p"); el.textContent=p; ae.appendChild(el);
+    if(fits()){ page.push(p); continue; }
+    ae.removeChild(el);
+    if(page.length===0){   /* 문단 하나가 한 장보다 길면 문장 단위로 쪼갬 */
+      const parts=p.match(/[^.?!]+[.?!]+["”」』)]*\s*|[^.?!]+$/g)||[p];
+      if(parts.length>1){ const half=Math.ceil(parts.length/2); queue.unshift(parts.slice(half).join(" ").trim()); queue.unshift(parts.slice(0,half).join(" ").trim()); continue; }
+      page.push(p); }
+    else queue.unshift(p);
+    ansPages.push({q:first,paras:page}); first=false; page=[]; setup(false);
+  }
+  if(page.length) ansPages.push({q:first,paras:page});
 }
-addEventListener("resize",()=>{ if(cur>=0&&SCENES[cur].answer) fitAnswer(); });
+function renderAnswerPage(){
+  const pg=ansPages[ansPage], qe=document.getElementById("aQ"), ae=document.getElementById("aA");
+  const q=qText(ansScene);
+  qe.textContent=pg.q?q:""; qe.style.display=(pg.q&&q)?"":"none";
+  ae.innerHTML=""; pg.paras.forEach(p=>{ const el=document.createElement("p"); el.textContent=p; ae.appendChild(el); });
+  document.getElementById("aMore").hidden = ansPage>=ansPages.length-1;
+}
+function answerStep(dir){
+  if(!(cur>=0 && SCENES[cur].answer)) return false;
+  const nx=ansPage+dir; if(nx<0||nx>=ansPages.length) return false;
+  ansPage=nx; const ae=document.getElementById("aA"); ae.style.opacity=0;
+  setTimeout(()=>{ renderAnswerPage(); ae.style.opacity=1; },180); return true;
+}
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(cur>=0&&SCENES[cur].answer){ paginateAnswer(); ansPage=Math.min(ansPage,ansPages.length-1); renderAnswerPage(); } });
+addEventListener("resize",()=>{ if(cur>=0&&SCENES[cur].answer){ paginateAnswer(); ansPage=Math.min(ansPage,ansPages.length-1); renderAnswerPage(); } });
 
 
 /* ---------- 뉴스 자막: 녹음 파일의 문장 사이 쉼에 맞춘 시간(초) ---------- */
@@ -743,7 +789,7 @@ function playTrack(key){
 /* ---------- 장면 ---------- */
 const $=id=>document.getElementById(id);
 const tw=$("titleWrap"), stage=$("stage");
-function go(i){
+function go(i,atEnd){
   if(i<0||i>=SCENES.length||i===cur) return;
   cur=i; const s=SCENES[i];
   tw.classList.add("out");
@@ -751,7 +797,7 @@ function go(i){
     tw.classList.remove("out"); }, 900);
   stage.classList.toggle("dim",!!s.dim);
   stage.classList.toggle("answer",!!s.answer);
-  if(s.answer) showAnswer(s);
+  if(s.answer) showAnswer(s,atEnd);
   if(stage.classList.contains("news") && !s.news) newsStop();
   if(stage.classList.contains("letter") && !s.letter) lStop();
   stage.classList.toggle("letter",!!s.letter);
@@ -770,8 +816,9 @@ function tap(dir,el){
   keepAwake();
   if(!started){ started=true; $("start").classList.add("gone"); go(0); return; }
   el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),60);
+  if(answerStep(dir)) return;
   if(dir>0){ if(cur>=SCENES.length-1) null; else go(cur+1); }
-  else     { if(cur<=0) null; else go(cur-1); }
+  else     { if(cur<=0) null; else go(cur-1,true); }
 }
 $("zNext").addEventListener("click",e=>tap(1,e.currentTarget));
 $("zPrev").addEventListener("click",e=>tap(-1,e.currentTarget));
@@ -838,7 +885,7 @@ const LM_LOOP_AT=122;         /* 배경음악(2분 14초)이 잦아들기 시작
 const KB=[ /* 그림마다 [시작 배율, 끝 배율, 가로 이동%, 세로 이동%] */
  [1.04,1.12,-1,0],[1.10,1.03,1,-1],[1.02,1.10,0,1],[1.06,1.12,-1.5,0],[1.03,1.11,1,0],
  [1.10,1.02,0,1],[1.04,1.12,-1,-0.5],[1.02,1.09,0,0],[1.05,1.12,0,1],[1.00,1.14,0,0],
- [1.04,1.11,1,0],[1.08,1.02,-1,0],[1.03,1.10,0,-1],[1.02,1.12,0,1.5],[1.00,1.16,0,0],
+ [1.04,1.11,1,0],[1.08,1.02,-1,0],[1.03,1.10,0,-1],[1.16,1.08,0,4],[1.00,1.16,0,0],
  [1.05,1.12,-1.5,0],[1.03,1.13,0,0.5],[1.10,1.00,0,0],[1.04,1.12,1,0],[1.02,1.08,0,0]];
 const LV=new Audio("bgm/letter.mp3"); LV.preload="auto";
 const LMS=[new Audio("bgm/ending.mp3"), new Audio("bgm/ending.mp3")]; LMS.forEach(a=>{a.preload="auto";});
