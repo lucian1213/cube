@@ -832,29 +832,31 @@ try{ const sv=JSON.parse(localStorage.getItem("cube_letter_v1")||"null");
   if(Array.isArray(sv)&&sv.length===LETTER_CAPS.length) sv.forEach((v,k)=>{LETTER_CAPS[k][0]=v[0];LETTER_CAPS[k][1]=v[1];}); }catch(e){}
 const LETTER_IMG_AT = [0,3,7,11,14,16,21,26,29,32,37,41,45,52,55,57,62,65,74,81];   /* 그림 n번이 시작되는 자막 번호 */
 const L_INTRO=3.0;            /* 그림 1이 뜬 뒤 나레이션까지(초) */
-const L_MUSIC_IN=40.0;        /* 음악이 들어오는 시점: 곡 절정(4분 21초)이 "쉰 살의 김유진과"에 오도록 */
+const LM_LOOP_AT=122;         /* 배경음악(2분 14초)이 잦아들기 시작하는 지점에서 처음부터 다시 겹쳐 들어옴 */
 const KB=[ /* 그림마다 [시작 배율, 끝 배율, 가로 이동%, 세로 이동%] */
  [1.04,1.12,-1,0],[1.10,1.03,1,-1],[1.02,1.10,0,1],[1.06,1.12,-1.5,0],[1.03,1.11,1,0],
  [1.10,1.02,0,1],[1.04,1.12,-1,-0.5],[1.02,1.09,0,0],[1.05,1.12,0,1],[1.00,1.14,0,0],
  [1.04,1.11,1,0],[1.08,1.02,-1,0],[1.03,1.10,0,-1],[1.02,1.12,0,1.5],[1.00,1.16,0,0],
  [1.05,1.12,-1.5,0],[1.03,1.13,0,0.5],[1.10,1.00,0,0],[1.04,1.12,1,0],[1.02,1.08,0,0]];
 const LV=new Audio("bgm/letter.mp3"); LV.preload="auto";
-const LM=new Audio("bgm/stay.mp3");   LM.preload="auto";
-let lT0=0, lTimer=null, lMusTimer=null, lTick=null, lOn=false, lImg=-1, lFront=0, lFade=null, lCapIdx=-2;
+const LMS=[new Audio("bgm/ending.mp3"), new Audio("bgm/ending.mp3")]; LMS.forEach(a=>{a.preload="auto";});
+let lmCur=0, lmLooped=false, lmLevel=0, lmFadeOut=false;
+let lTimer=null, lTick=null, lOn=false, lImg=-1, lFront=0, lFade=null, lCapIdx=-2;
+function lMusicPlay(k){ const a=LMS[k]; a.currentTime=0; a.volume=0; a.play().catch(e=>toast("편지 배경음악을 재생하지 못했습니다 ("+(e&&e.name||"")+"). 화면을 한 번 눌러주세요.")); lmCur=k; lmLooped=false; }
 function lStart(){
-  lOn=true; lImg=-1; lCapIdx=-2; lT0=performance.now();
+  lOn=true; lImg=-1; lCapIdx=-2; lmLevel=0; lmFadeOut=false;
   document.getElementById("endcard").classList.remove("on");
   ["ph0","ph1"].forEach(id=>{const e=document.getElementById(id); e.style.opacity=0; e._kb=null;});
   lShow(0);
-  clearTimeout(lTimer); clearTimeout(lMusTimer);
+  lMusicPlay(0);
+  clearTimeout(lTimer);
   lTimer=setTimeout(()=>{ if(!lOn) return; LV.currentTime=0; LV.volume=1; LV.play().catch(()=>toast("편지 나레이션(bgm/letter.mp3)을 재생하지 못했습니다.")); }, L_INTRO*1000);
-  lMusTimer=setTimeout(()=>{ if(!lOn) return; LM.currentTime=0; LM.volume=0; LM.play().catch(()=>{}); }, L_MUSIC_IN*1000);
   if(!lTick) lTick=setInterval(lFrame, 1000/12);   /* 초당 12장: 스톱모션 느낌 */
   keepAwake();
 }
 function lStop(){
-  lOn=false; clearTimeout(lTimer); clearTimeout(lMusTimer);
-  ramp(LV,0,800,()=>LV.pause()); ramp(LM,0,1500,()=>LM.pause());
+  lOn=false; clearTimeout(lTimer);
+  ramp(LV,0,800,()=>LV.pause()); LMS.forEach(a=>ramp(a,0,1500,()=>a.pause()));
   if(lTick){ clearInterval(lTick); lTick=null; }
   document.getElementById("lCap").classList.add("off");
 }
@@ -879,22 +881,32 @@ function lFrame(){
     e.style.transform=`translate(${dx*p+jx}%,${dy*p+jy}%) scale(${s}) rotate(${jr}deg)`;
     e.style.filter=`brightness(${0.97+Math.random()*0.05})`;
   });
-  if(LV.paused && !LV.ended) return;
-  const t=LV.ended ? 1e9 : LV.currentTime;
-  let k=-1; for(let j=0;j<LETTER_CAPS.length;j++){ const nx=j+1<LETTER_CAPS.length?LETTER_CAPS[j+1][0]:Infinity;
-    const end=(nx-LETTER_CAPS[j][1]<1.2)?nx:LETTER_CAPS[j][1]+0.4; if(t>=LETTER_CAPS[j][0]&&t<end) k=j; }
+  const started = !LV.paused || LV.ended;
+  const t = LV.ended ? 1e9 : LV.currentTime;
+  /* 자막 */
+  let k=-1;
+  if(started){ for(let j=0;j<LETTER_CAPS.length;j++){ const nx=j+1<LETTER_CAPS.length?LETTER_CAPS[j+1][0]:Infinity;
+    const end=(nx-LETTER_CAPS[j][1]<1.2)?nx:LETTER_CAPS[j][1]+0.4; if(t>=LETTER_CAPS[j][0]&&t<end) k=j; } }
   if(k!==lCapIdx){ lCapIdx=k; const c=document.getElementById("lCap");
     if(k<0) c.classList.add("off"); else { c.textContent=LETTER_CAPS[k][2]; c.classList.remove("off"); } }
-  let n=0; for(let j=0;j<LETTER_IMG_AT.length;j++) if(t>=imgStart(j)-0.6) n=j;
-  lShow(n);
-  if(!LM.paused){   /* 말할 때는 작게, 쉴 때와 편지가 끝난 뒤에는 크게 */
-    const speaking = k>=0 && t>=LETTER_CAPS[k][0] && t<=LETTER_CAPS[k][1];
-    const target = LV.ended ? .75 : (speaking ? .28 : .42);
-    LM.volume = Math.max(0,Math.min(1,LM.volume+(target-LM.volume)*0.05));
-  }
+  /* 그림 */
+  if(started){ let n=0; for(let j=0;j<LETTER_IMG_AT.length;j++) if(t>=imgStart(j)-0.6) n=j; lShow(n); }
+  /* 배경음악: 잦아드는 지점에서 다음 바퀴를 겹쳐 시작 (편지가 끝난 뒤에는 더 잇지 않음) */
+  const cur=LMS[lmCur];
+  if(!lmLooped && !LV.ended && cur.currentTime>=LM_LOOP_AT){ lmLooped=true; const nk=1-lmCur; const nx=LMS[nk]; nx.currentTime=0; nx.volume=0; nx.play().catch(()=>{}); lmCur=nk; }
+  /* 말할 때는 작게, 쉴 때와 편지가 끝난 뒤에는 크게 */
+  const speaking = k>=0 && t>=LETTER_CAPS[k][0] && t<=LETTER_CAPS[k][1];
+  const target = lmFadeOut ? 0 : (LV.ended ? .7 : (!started ? .45 : (speaking ? .3 : .45)));
+  lmLevel += (target-lmLevel)*(lmFadeOut?0.012:0.05);
+  LMS.forEach(a=>{ if(!a.paused){ a.volume=Math.max(0,Math.min(1,lmLevel)); if(lmFadeOut&&lmLevel<0.01) a.pause(); } });
 }
-LM.addEventListener("ended",()=>{ if(lOn) document.getElementById("endcard").classList.add("on"); });
+LV.addEventListener("ended",()=>{ if(lOn) setTimeout(()=>{ if(!lOn) return;
+  document.getElementById("endcard").classList.add("on"); lmFadeOut=true; }, 5000); });
 
+/* ---------- 음원을 못 불러오면 어떤 파일인지 알려줌 ---------- */
+function watchAudio(a){ a.addEventListener("error",()=>{ const f=(a.currentSrc||a.src||"").split("/").slice(-2).join("/");
+  toast("음원을 불러오지 못했습니다: "+decodeURIComponent(f)+" — 파일 이름과 bgm 폴더 위치를 확인해 주세요."); }); }
+[...A, NB, LV, ...LMS].forEach(watchAudio);
 /* ---------- 반딧불이 ---------- */
 (function(){
   const c=$("flies"), x=c.getContext("2d"); let W,H,dpr; const F=[];
