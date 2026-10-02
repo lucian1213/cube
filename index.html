@@ -97,6 +97,21 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .ticker .run span{font-size:clamp(13px,1.55vw,22px);padding-right:3vw;color:var(--star)}
 .ticker .run span::before{content:"";display:inline-block;width:.45em;height:.45em;background:var(--firefly);margin:0 1.1vw 0 0;vertical-align:.15em}
 @keyframes run{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ans{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .9s ease;
+  background:radial-gradient(ellipse at 50% 40%,rgba(10,15,32,.86),rgba(6,10,22,.97));
+  padding:calc(env(safe-area-inset-top,0px) + 4.2vh) 4vw calc(env(safe-area-inset-bottom,0px) + 4vh);display:flex;flex-direction:column}
+.stage.answer .ans{opacity:1}
+.stage.answer .title-wrap,.stage.answer .brand{opacity:0}
+.ans .hd{display:flex;align-items:baseline;gap:1.2vw;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:1.6vh}
+.ans .badge{font-weight:800;font-size:clamp(14px,1.6vw,24px);padding:.25em .7em;border-radius:4px;color:#14130a;background:var(--acc)}
+.ans .rd{color:var(--acc);font-weight:700;font-size:clamp(13px,1.4vw,20px);letter-spacing:.08em}
+.ans .ct{font-weight:800;font-size:clamp(20px,2.7vw,40px)}
+.ans .bd{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);gap:3vw;padding-top:2.6vh}
+.ans .fig{min-height:0;display:flex;align-items:center;justify-content:center}
+.ans .fig svg{width:100%;height:100%;max-height:100%}
+.ans .tx{min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.ans .q{color:var(--acc);font-weight:800;line-height:1.45;margin-bottom:.9em;word-break:keep-all}
+.ans .a{line-height:1.75;word-break:keep-all;color:var(--star)}
 .sync{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 9vh);transform:translateX(-50%);z-index:7;
   width:min(86vw,980px);padding:16px 20px;border-radius:12px;background:rgba(8,13,28,.94);border:1px solid var(--firefly);
   font-size:clamp(14px,1.6vw,20px);line-height:1.6;pointer-events:none}
@@ -139,6 +154,10 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
   </button>
   <div class="start" id="start">화면을 눌러 시작</div>
+  <div class="ans" id="ans" aria-live="polite">
+    <div class="hd"><span class="badge" id="aBadge"></span><span class="rd" id="aRound"></span><span class="ct" id="aTitle"></span></div>
+    <div class="bd"><div class="fig" id="aFig"></div><div class="tx" id="aTx"><div class="q" id="aQ"></div><div class="a" id="aA"></div></div></div>
+  </div>
   <div class="toast" id="toast"></div>
   <div class="sync" id="sync" hidden></div>
 </div>
@@ -146,24 +165,427 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 <script>
 /* 음원은 bgm 폴더에 같은 이름으로 넣어두세요. news.mp3는 녹음 후 추가. */
 const SCENES = [
-  {num:"",     title:"큐브관 살인사건 전말",            sub:"",                  track:"flight"},
-  {num:"",     title:"오프닝 뉴스",                     sub:"2030년 8월 21일",   track:"news", news:true},
-  {num:"하나", title:"「불빛이 심연으로 가라앉았다」",   sub:"",                  track:"sidewinder"},
-  {num:"둘",   title:"「뒤집힘 · 있을 수 없는 추락」",   sub:"",                  track:"phantom"},
-  {num:"셋",   title:"「밀실 속 보이지 않는 칼날」",     sub:"",                  track:"sneaking"},
-  {num:"넷",   title:"「빈방에서 물에 빠져 죽다」",      sub:"",                  track:"darkness"},
-  {num:"다섯", title:"「갇힌 짐승의 마지막 잠」",        sub:"",                  track:"stinger"},
-  {num:"여섯", title:"「천사가 내려온 자리」",           sub:"",                  track:"dayone"},
-  {num:"",     title:"두 번째 해답",                     sub:"",                  track:"profiling"},
-  {num:"",     title:"단서 뒤바뀜",                      sub:"",                  track:"time"},
-  {num:"",     title:"레드 헤링",                        sub:"",                  track:"kyoto"},
-  {num:"",     title:"세 번째 해답",                     sub:"",                  track:"chariot_main"},
-  {num:"",     title:"「사랑을 재는 단위」",             sub:"천사들의 짧은 무대", track:"aqua"},
-  {num:"",     title:"일기 조각의 주인",                 sub:"",                  track:"chariot_ai"},
-  {num:"",     title:"「만약 그때……」",                  sub:"",                  track:"summer"},
-  {num:"",     title:"「별에 새긴 약속」",               sub:"",                  track:"stay", dim:true}
+{
+"num": "",
+"title": "큐브관 살인사건 전말",
+"sub": "",
+"track": "flight"
+},
+{
+"num": "",
+"title": "오프닝 뉴스",
+"sub": "2030년 8월 21일",
+"track": "news",
+"news": true
+},
+{
+"num": "하나",
+"title": "「불빛이 심연으로 가라앉았다」",
+"sub": "",
+"track": "sidewinder"
+},
+{
+"num": "둘",
+"title": "「뒤집힘 · 있을 수 없는 추락」",
+"sub": "",
+"track": "phantom"
+},
+{
+"answer": "A1",
+"part": 0,
+"parts": 1,
+"case": "「뒤집힘 · 있을 수 없는 추락」",
+"track": "phantom"
+},
+{
+"num": "셋",
+"title": "「밀실 속 보이지 않는 칼날」",
+"sub": "",
+"track": "sneaking"
+},
+{
+"answer": "A2",
+"part": 0,
+"parts": 2,
+"case": "「밀실 속 보이지 않는 칼날」",
+"track": "sneaking"
+},
+{
+"answer": "A2",
+"part": 1,
+"parts": 2,
+"case": "「밀실 속 보이지 않는 칼날」",
+"track": "sneaking"
+},
+{
+"num": "넷",
+"title": "「빈방에서 물에 빠져 죽다」",
+"sub": "",
+"track": "darkness"
+},
+{
+"answer": "A3",
+"part": 0,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "darkness"
+},
+{
+"answer": "A3",
+"part": 1,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "darkness"
+},
+{
+"num": "다섯",
+"title": "「갇힌 짐승의 마지막 잠」",
+"sub": "",
+"track": "stinger"
+},
+{
+"answer": "A4",
+"part": 0,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "stinger"
+},
+{
+"answer": "A4",
+"part": 1,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "stinger"
+},
+{
+"num": "여섯",
+"title": "「천사가 내려온 자리」",
+"sub": "",
+"track": "dayone"
+},
+{
+"num": "",
+"title": "두 번째 해답",
+"sub": "인물 정보표",
+"track": "profiling"
+},
+{
+"num": "두 번째 해답",
+"title": "「뒤집힘 · 있을 수 없는 추락」",
+"sub": "",
+"track": "phantom"
+},
+{
+"answer": "B1",
+"part": 0,
+"parts": 1,
+"case": "「뒤집힘 · 있을 수 없는 추락」",
+"track": "phantom"
+},
+{
+"num": "두 번째 해답",
+"title": "「밀실 속 보이지 않는 칼날」",
+"sub": "",
+"track": "sneaking"
+},
+{
+"answer": "B2",
+"part": 0,
+"parts": 2,
+"case": "「밀실 속 보이지 않는 칼날」",
+"track": "sneaking"
+},
+{
+"answer": "B2",
+"part": 1,
+"parts": 2,
+"case": "「밀실 속 보이지 않는 칼날」",
+"track": "sneaking"
+},
+{
+"num": "두 번째 해답",
+"title": "「빈방에서 물에 빠져 죽다」",
+"sub": "",
+"track": "darkness"
+},
+{
+"answer": "B3",
+"part": 0,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "darkness"
+},
+{
+"answer": "B3",
+"part": 1,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "darkness"
+},
+{
+"num": "두 번째 해답",
+"title": "「갇힌 짐승의 마지막 잠」",
+"sub": "",
+"track": "stinger"
+},
+{
+"answer": "B4",
+"part": 0,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "stinger"
+},
+{
+"answer": "B4",
+"part": 1,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "stinger"
+},
+{
+"num": "",
+"title": "단서 뒤바뀜",
+"sub": "",
+"track": "time"
+},
+{
+"num": "",
+"title": "레드 헤링",
+"sub": "",
+"track": "kyoto"
+},
+{
+"num": "세 번째 해답",
+"title": "「뒤집힘 · 있을 수 없는 추락」",
+"sub": "",
+"track": "chariot_main"
+},
+{
+"answer": "C1",
+"part": 0,
+"parts": 1,
+"case": "「뒤집힘 · 있을 수 없는 추락」",
+"track": "chariot_main"
+},
+{
+"num": "세 번째 해답",
+"title": "「밀실 속 보이지 않는 칼날」",
+"sub": "",
+"track": "chariot_main"
+},
+{
+"answer": "C2",
+"part": 0,
+"parts": 1,
+"case": "「밀실 속 보이지 않는 칼날」",
+"track": "chariot_main"
+},
+{
+"num": "세 번째 해답",
+"title": "「빈방에서 물에 빠져 죽다」",
+"sub": "",
+"track": "chariot_main"
+},
+{
+"answer": "C3",
+"part": 0,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "chariot_main"
+},
+{
+"answer": "C3",
+"part": 1,
+"parts": 2,
+"case": "「빈방에서 물에 빠져 죽다」",
+"track": "chariot_main"
+},
+{
+"num": "세 번째 해답",
+"title": "「갇힌 짐승의 마지막 잠」",
+"sub": "",
+"track": "chariot_main"
+},
+{
+"answer": "C4",
+"part": 0,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "chariot_main"
+},
+{
+"answer": "C4",
+"part": 1,
+"parts": 2,
+"case": "「갇힌 짐승의 마지막 잠」",
+"track": "chariot_main"
+},
+{
+"num": "",
+"title": "「사랑을 재는 단위」",
+"sub": "천사들의 짧은 무대",
+"track": "aqua"
+},
+{
+"num": "",
+"title": "일기 조각의 주인",
+"sub": "",
+"track": "chariot_ai"
+},
+{
+"num": "",
+"title": "「만약 그때……」",
+"sub": "",
+"track": "summer"
+},
+{
+"num": "",
+"title": "「별에 새긴 약속」",
+"sub": "",
+"track": "stay",
+"dim": true
+}
 ];
 const src = key => `bgm/${key}.mp3`;
+
+/* ---------- 해답 카드 ---------- */
+const ANSWERS = {"A1": [[null, "범인은 미리 쪽지를 남겨두고, 밤중에 김유진의 방을 201에서 꼭대기 층 304로 옮겼다. 김유진이 새벽 2시에 약속 장소로 가려고 문을 여는 걸 이용해, 문을 열자마자 꼭대기 층에서 떨어지게 만들었다. 큐브관 방문은 바깥으로 밀어 여는 구조라 밀면서 자연스럽게 발이 앞으로 나간다. 복도의 검은 유리도 바깥의 밤도 새까매서 분간이 안 되고, 방 안의 수면 유도 기체까지 더해져 새벽 2시의 김유진은 잠에 취해 있었다. 게다가 첫 번째 사망자라 그전에 아무 일도 없었으니 경계할 이유가 없었고, 아무 대비 없이 문을 열어 떨어졌다. 죽은 뒤 범인은 옥상으로 가서 문을 닫고 방을 원래대로 돌려놨다."]], "A2": [["한도경의 밀실은 어떻게 만들었을까?", "저녁을 먹는 동안 김세영이 자기 방과 한도경의 방을 바꿨다. 둘은 같이 1층으로 내려와 문 앞에서 잠금을 풀려 했는데, 그때 방은 이미 서로 바뀐 상태였다. 세영이 잘 자라고 인사했고, 서로 인사를 주고받는 대화로 각자의 문이 열린 셈이 됐다. 큐브관은 복도에서 평범하게 말해도 복도 전체에 또렷이 들리게 설계돼 있어서 소리칠 필요도 없다. 한도경이 세영의 방에 들어가 문을 잠갔는데, 잠그는 건 누구 목소리로도 되기 때문이다. 그래서 세영은 언제든 다시 열고 들어갈 수 있었다. 실제로는 세영이 들어가 독을 묻힌 작은 나이프로 한도경을 죽였다. 작은 나이프만으로는 사람을 죽일 수 없으니 독이 필요했다. 그다음 시신을 한도경의 방으로 옮기고 방을 제자리로 돌린 뒤 잠가서 밀실처럼 보이게 했다. 밤 10시 창문 두드리는 시간이 되자, 세영은 방을 먼저 101 자리로 옮겨 자기 창문을 두드려 한도경 쪽에서 나는 소리처럼 꾸미고, 다시 103으로 돌려 두 번째로 두드렸다. 원격 조작이 즉시 이뤄지는 설정이라 5초 안에 충분히 된다. 이 수법으로 범인이 김세영임이 확정된다."], ["한도경 방의 노크 소리는 어떻게 꾸몄을까?", "원격으로 자기 방을 101 자리로 옮겨 두드린 뒤 제자리로 돌려 다시 두드렸다. 밀실이 풀리면 범인이 김세영임이 나오고, 세영은 한도경 바로 다음 순서로 두드리는 사람인데, 원격 조작이 \"즉시\"라 5초면 된다."]], "A3": [["다인은 밥을 먹고 방에 돌아와 문을 잠그고 잤다. 범인은 어떻게 문을 열었을까?", "다들 식당에 있는 동안 범인이 다인의 방과 자기 방을 바꿨다. 범인은 김세영이다. 다인이 들어간 건 세영의 방이었고, 거기서 문을 잠그고 잤다. 세영의 방엔 약이 있었다. 세영이 중간에 문을 두드린 건 다인이 약에 취했는지 확인하려던 것이다. 아직 깨어 있으면 들어가지 않는다. 약이 돌기를 기다렸다가 잠금을 풀고 들어갔다."], ["사방이 열리지 않는 방에서 다인은 어떻게 물에 빠져 죽었을까?", "범인은 화장실 물을 틀어놓고 흘려보냈다. 물 쓴 양이 이상하니 다들 화장실 물에 매달리게 되고, 실제로 다인을 죽인 물 — 빗물 — 은 가려진다. 전날 밤새 큰비가 왔다. 범인은 먼저 김유진 방의 카펫을 걷어 유진의 방문 밖 복도에, 원래 있던 카펫 위에 겹쳐 깔았다. 아무도 지나가지 않는 자리라 조금 높아진 걸 눈치채지 못한다. 그다음 유진의 방을 식당 자리, 즉 꼭대기 층으로 옮겨 문이 위를 보게 하고, 옥상에 올라가 문을 열어 밤새 비를 받았다. 날이 밝으면 되돌리는데, 다들 식당에 밥 먹으러 가기 때문이다. 되돌린 뒤에도 문은 위를 향해야 물이 문을 밀어내지 않는다. 밥을 먹은 뒤 문태오와 김미래 시점에 머리가 아프고 몽롱하다는 게 나오는데, 사실 약을 탄 것이다. 세영은 낮잠 시간에 다들 뻗은 틈에 움직였다. 물을 채운 유진의 방을 문태오의 방 자리로 옮기고, 다인 방의 문을 위로 돌린 뒤, 호스와 펌프를 들고 옥상에 올라가 두 문을 열고 유진 방의 물을 세영 방으로 퍼 넣어 다인을 빠뜨렸다. 방 깊이가 4미터, 방 사이가 4미터니 8미터짜리 호스면 바닥의 물까지 닿는다. 다인이 죽은 뒤 물을 유진의 방으로 되퍼 옮기고, 문을 닫고 방을 제자리로 돌린 다음, 시신과 젖은 카펫을 다인의 방으로 옮기고 다인 방의 마른 카펫을 세영의 방에 깔았다. 물이 가득한 유진의 방은 201 자리로 되돌렸는데, 문이 북쪽을 보게 되니 물의 압력이 잠기지 않은 문을 밀어 열어 물이 전부 바깥으로 빠진다. 북쪽엔 한도경뿐인데 이미 죽었으니 아무도 못 본다. 바깥 소리는 안에서 안 들리니 물소리도 안 들린다. 마지막으로 유진 방의 마른 카펫을 되돌려 놓았다."]], "A4": [["미래는 왜 세영을 찾아가다 창고에 들어갔고, 세영은 왜 미래를 찾다 다인의 시신을 봤을까?", "김세영이 창고와 방을 바꿨고, 미래는 304 다인의 방에서 깨어났다. 다인의 방에서 세영을 찾아가려면 두 층 아래 03호실로 가야 하는데, 세영이 창고와 바꿔놨으니 창고로 들어가게 된다. 세영이 미래를 찾으려면 한 층 위 04호실로 가야 하는데, 세영은 203으로 옮겨져 있었으니 304로 가게 되고 거기서 다인의 시신을 본다."], ["미래는 왜 사방이 열리지 않는 방에 있었고, 두 면의 유리 밖에 반딧불이가 보였을까?", "미래는 204, 자기 방에서 죽었다. 문이 아래를 보도록 돌렸는데 아래는 화장실 천장이라 열리지 않는다. 그다음 한도경의 방을 304로 옮기고 문이 아래를 보게 했다. 한도경 방은 문이 없으니, 미래 방에서 위를 보는 매직미러를 지나 한도경 방문 맞은편 매직미러를 통해 꼭대기 층 바깥의 반딧불이가 보인다. 카펫은 방 오른쪽 벽, 원래의 바닥에 있다. 미래에게는 두 면의 창이 자기 주위 네 면 중 둘에 있는 셈이다. 다만 문제가 하나 남는다. 한쪽 창밖 반딧불이는 보통 거리인데 다른 쪽은 4미터 밖이다. 어떻게 눈치 못 채게 했을까. 창고에 잠자리채가 있다. 범인은 반딧불이 몇 마리를 잡아 한도경 방에 넣어 거리감을 맞췄다."]], "B1": [[null, "중력 카펫을 2층 복도 남쪽 벽에 붙인다. 김유진이 새벽에 문을 열고 나가면 복도 쪽 중력에 끌려 복도 길이만큼 옆으로 떨어져 죽는다. 방 위치상 8미터가 넘으니 7미터 조건을 만족한다. 그럼 복도에 떨어진 피는 어떻게 처리했을까. 유리에 묻은 피는 닦기 쉽지만 카펫에 스미면 지우기 어렵다. 그래서 범인은 물이 안 스미는 면, 즉 카펫 뒷면을 쓴다. 먼저 복도의 카펫을 다 걷고 한 장을 벽에 붙여 중력장을 만든다. 나머지는 뒤집어 그 위에 올려두는데, 평평하게 깔면 효과가 나버리니 벽 모서리에 구부려 세워둔다. 그것들이 효과를 내는 카펫을 덮어 보호한다. 범인은 창고의 카트로 시신을 1층 동쪽 바닥으로 옮겨 옥상에서 떨어진 것처럼 꾸몄다. 단서에 전날 밤 모래바람이 한 차례 불어 핏자국이 덮이고 망가졌다고 나온다. 그래서 시신 주변 흔적으로는 아무것도 알 수 없고, 그 자리가 처음 현장이 아닐 수도 있다는 뜻이 된다."]], "B2": [["한도경의 밀실은 어떻게 만들었을까?", "한도경 시점의 \"저녁 시간, 나는 먼저 화장실에 한 번 다녀왔다. 그러고 식당으로 가던 길에 문득 방문을 안 잠근 게 생각나서, 돌아가 문을 잠그고 나서야 식당에 갔다.\"는 대목에서, 범인이 방에 들어가 뭔가를 설치할 시간이 있었음을 알 수 있다. 범인은 조명 아래 카펫 한 귀퉁이를 접어 나이프로 눌러두고, 독을 묻힌 양철 조각을 위로 던졌다. 양철은 천장에 닿으면 멈춰 위에 붙어 있는다. 한도경이 돌아와 문을 잠근 뒤 구석 조명 아래 은빛으로 번쩍이는 나이프를 보고 집어 들자, 카펫이 탄성으로 펴지면서 날카로운 조각들이 4미터 위에서 쏟아져 그를 베었다."], ["한도경 방의 노크 소리는 어떻게 꾸몄을까?", "밖에서 두드렸다. 이 수법으로 범인이 김세영임이 확정된다. 세영과 한도경 둘 다 1층이고, 세영은 큐브관 밖으로 나가 바깥에서 창을 두드렸다. 밖에서 보면 두 사람의 유리는 4미터 거리라 5초면 충분히 간다."]], "B3": [["다인은 밥을 먹고 방에 돌아와 문을 잠그고 잤다. 범인은 어떻게 문을 열었을까?", "다인이 방에 돌아왔을 때 이미 안에 사람이 있었다. 증언 2를 보면 두 딸 중 하나가 앞을 못 본다. 시점을 맞춰보면 미래는 분명히 볼 수 있다. 그런데 다인의 시점에는 제 눈으로 본 장면이 하나도 없다. 그러니 앞을 못 보는 쪽은 박다인이다. 다인은 식당에 가면서 문을 잠그지 않았고, \"마지막으로 다 먹고 식당을 나온\" 사람이었다. 그러니 범인은 식당을 나온 뒤 다인의 방에 들어갔다. 다인이 돌아와 문을 잠그고 잔 뒤, 범인은 카펫 이야기를 물어 다인이 대답하게 했다. 그때 범인은 문 안쪽에서 문을 누르고 있었다. 다인이 대답하는 순간 잠금이 풀렸고, 다인은 계속 잤지만 문은 이미 열려 있었다. 누가 우연히 문을 두드려주기를 기대할 수는 없으니, 두드린 사람이 곧 범인이다. 김세영이다. 그런데 다인이 들은 건 \"문 밖에서 【……"], ["사방이 열리지 않는 방에서 다인은 어떻게 물에 빠져 죽었을까?", "범인은 다인을 재운 뒤 1층으로 데려가, 중력 카펫을 1층 복도 서쪽 벽에 붙이고 그 공간에서 화장실 물로 빠뜨렸다. 중력장은 카펫에서 수직으로 나노 자성 유리까지라, 복도 전체의 가로 구역이 된다. 호스가 그 구역 어디든 닿기만 하면 물은 서쪽으로 떨어진다. 길이도 충분하다. 다인이 못 연 네 면은 바닥, 천장, 한도경 쪽 벽, 세영의 문이다."]], "B4": [["미래는 왜 세영을 찾아가다 창고에 들어갔고, 세영은 왜 미래를 찾다 다인의 시신을 봤을까?", "다인의 시신은 204, 미래의 방에 있다. 미래는 204에서 깨어나 다인의 방인 줄 알고 두 층 아래 03호실로 가려 했다. 202 전송실에서 아래 버튼을 한 번 눌러 102에 도착했는데, 범인이 미리 102 전송실 카펫을 천장에 붙여뒀다. 미래는 천장에 서게 되어 위아래 화살표가 뒤집힌다(1층에도 아래 버튼이 있지만 원래 작동하지 않는다). 그래서 한 번 더 아래를 눌렀는데 실은 위였고, 다시 202로 돌아왔다. 나와서 03호실로 가니 창고였다. 세영은 자리가 안 바뀌었으니 103에서 204로 올라갔고 거기서 다인의 시신을 봤다."], ["미래는 왜 사방이 열리지 않는 방에 있었고, 두 면의 유리 밖에 반딧불이가 보였을까?", "미래는 304, 다인의 방에 있었다. 꼭대기 층 방은 매직미러가 세 면인데, 범인이 카펫을 304 동쪽 벽에 붙여 한 면을 가렸다. 미래에게는 카펫이 바닥이 되니, 그 위에 선 미래 주위로 남쪽 유리와 천장 유리 두 면이 남는다. 방문은 미래의 천장이 되어, 잠기지 않았어도 손이 닿지 않아 열 수 없었다."]], "C1": [[null, "김유진을 재워서 301에 눕혀둔다. 유진 시점에 잘 때 문을 안 잠갔고 그 뒤 문을 열고 약속에 나갔다고 했으니, 4층으로 올라가게 된다. 범인은 미리 4층 전송실과 복도 카펫을 천장에 붙여뒀다. 유진이 올라오면 위아래가 뒤집혀 있으니, 다인 방의 북쪽 유리벽을 두드리게 된다. 유진에겐 그게 01호실 문으로 보이기 때문이다. 범인이 미리 다인을 재워뒀으니 다인은 열지 않는다. 꼭대기 층엔 다인뿐이라 다른 사람도 못 듣는다. 문전박대당한 유진은 자기 방으로 내려가려는데, 4층 전송실이 뒤집혀 있으니 아래인 줄 알고 누른 게 위였고 옥상으로 올라간다. 범인은 옥상에서 기다리다가 올라온 유진을 밀었다."]], "C2": [[null, "범인은 약으로 한도경을 방에서 재웠다. 사람들이 문을 부수고 들어간 뒤, 독을 묻힌 작은 나이프로 한 번 그었다. 수법이 아주 간결하다. 내용을 보면 범인은 문태오로 특정된다. 문을 부순 뒤 \"태오 씨가 다가가 맥을 짚어보니\"고 나온다. 그 틈에 태오는 소매에 숨겨둔 나이프로 피부를 긋고 시신 옆에 놓았다. 나중에 태오를 구할 때 밧줄로 \"긴 소매 소맷부리를 묶여 있었다\"고 나오니 긴 소매를 입고 있었고 칼을 숨길 수 있었다. 현장은 \"어둑한 조명\"고 묘사되고, 한도경은 남동쪽 구석에 쓰러져 있었으니 태오가 다가가 쭈그리면 반드시 등을 지게 된다. 유리 조각이 몸에 상처를 많이 냈으니 나이프 자국은 묻힌다. 동시에 태오가 묶여 있던 것도 풀린다. 태오가 범인이면 그건 자작극이다. 그날 밤 조명에서 향이 안 났다는 대목이 있는데, 다른 날은 늘 향이 났다. 그 향에 약이 들어 있다. 매일 밤 다들 깊이 잠들었기에 한 명씩 죽을 수 있었던 것이다. 그런데 그날만은 재우면 안 됐다. 납치극으로 다들 깨워 모아야 했으니까. 그래야 한도경이 없어진 걸 알아채고, 태오가 큐브 두 면을 맞춰 놓아 방 안에서 이미 죽었다고 믿게 만들어 문을 부수게 되고, 제일 먼저 다가가 수법을 끝낼 수 있다. 다음 날 아침까지 기다리면 한도경의 약도 깬다. 이제 한도경은 10시 전에 죽은 게 아니니, 창문 두드리는 소리는 본인이 두드린 것이다."]], "C3": [["다인은 밥을 먹고 방에 돌아와 문을 잠그고 잤다. 범인은 어떻게 문을 열었을까?", "이 수법은 안 뒤집힌다. 다인은 여전히 앞을 못 보고, 두드린 사람은 방 안에 숨어 있을 수 있다. 다만 사람이 바뀐다. 두드린 사람이 \"거기 카펫 남는 거 있어요? 저희 층에 한 장이 모자라서요.\"라고 했고 다인이 \"없어요. 미래 있는 층에 가 보세요.\"라고 답했다. 이제 세영과 미래가 같은 층이니 두드린 사람은 태오다. 두드린 사람이 범인이라는 논리에 따라 이 사건의 범인은 문태오다."], ["사방이 열리지 않는 방에서 다인은 어떻게 물에 빠져 죽었을까?", "1층 문들을 전부 180도로 열면 가운데 방 하나 크기의 공간이 생긴다. 다인을 그 안에 가둔다. 문은 180도까지만 열리니 사방을 더 밀 수 없다. 물은 문태오 방문의 구멍으로 붓는다. 이야기 카드에 구멍이 태오 방문 오른쪽 아래 모서리에 있다고 나오니, 180도로 열면 구멍이 화장실 문 앞에 온다. 범인은 호스를 수도꼭지에 연결해 구멍으로 붓는다. 다만 구멍이 아래쪽이라 부으면서 새니, 먼저 가운데 구역 카펫을 천장에 올리고 다인을 복도 한가운데 천장 위에 둔다. 그러면 물이 천장 쪽으로 흐른다. 다인이 죽으면 호스를 펌프에 연결해 화장실로 퍼내 흘려보낸다. 시신과 젖은 카펫은 다인의 방으로 되돌린다. 이번에도 젖는 건 카펫 한 장뿐이다."]], "C4": [["미래는 왜 세영을 찾아가다 창고에 들어갔고, 세영은 왜 미래를 찾다 다인의 시신을 봤을까?", "다인의 시신은 304, 미래의 방에 있다. 미래는 304에서 깨어나 다인의 방인 줄 알고 세영을 찾아가려 했다. 이제 한 층만 내려가 03호실로 가면 되는데, 그게 203 창고다. 세영이 미래를 찾으러 가면 미래 방에서 다인의 시신을 본다."], ["미래는 왜 사방이 열리지 않는 방에 있었고, 두 면의 유리 밖에 반딧불이가 보였을까?", "미래는 빈방에서 죽었다. 문이 안 열린 건 범인이 자기 목소리를 그 방에 등록해 잠갔기 때문이다. 1막에 \"모든 방의 잠금은 초기화 상태고, 각자 자기 방에 자기 목소리를 등록했다\"고 나온다. 사람이 안 사는 빈방은 여전히 초기화 상태라 등록할 수 있다는 뜻이다. 또 \"한 방에는 한 사람의 목소리만 등록된다\"고 하는데, 이건 한 사람의 목소리가 한 방에만 등록된다는 뜻이 아니다. 그러니 범인은 빈방 하나에 자기 목소리를 더 등록하면 된다. 큐브관의 빈방 셋 다 쓸 수 있다. 204와 301은 같고, 403이라면 창이 세 면이라 한 단계 더 필요하다. 카펫을 천장에 놓거나 옥상에서 천창을 덮어야 한다."]]};
+/* ---------- 해답 그림 (원본 해답 카드 그림을 한국어로 다시 그림) ---------- */
+const DG = (function(){
+  const L='rgba(214,224,245,.75)', F='rgba(238,241,248,.05)', T='#e9ecf6', M='#9aa6c4';
+  let AC='#d8c53f';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const txt=(x,y,s,o={})=>`<text x="${x}" y="${y}" fill="${o.c||T}" font-size="${o.s||14}" text-anchor="${o.a||'middle'}" font-weight="${o.w||700}" dominant-baseline="middle">${esc(s)}</text>`;
+  const multi=(x,y,lines,o={})=>lines.map((l,i)=>txt(x,y+(i-(lines.length-1)/2)*(o.lh||(o.s||14)*1.25),l,o)).join('');
+  const arrowHead=(x,y,ang,c=L,sz=7)=>{const a=ang*Math.PI/180;
+    const p=[[x,y],[x-sz*Math.cos(a-.45),y-sz*Math.sin(a-.45)],[x-sz*Math.cos(a+.45),y-sz*Math.sin(a+.45)]];
+    return `<polygon points="${p.map(q=>q.join(',')).join(' ')}" fill="${c}"/>`;};
+  const line=(x1,y1,x2,y2,o={})=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${o.c||L}" stroke-width="${o.w||1.6}" ${o.d?`stroke-dasharray="${o.d}"`:''}/>`+
+    (o.head?arrowHead(x2,y2,Math.atan2(y2-y1,x2-x1)*180/Math.PI,o.c||L):'')+(o.tail?arrowHead(x1,y1,Math.atan2(y1-y2,x1-x2)*180/Math.PI,o.c||L):'');
+  const curve=(x1,y1,cx,cy,x2,y2,o={})=>`<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}" fill="none" stroke="${o.c||L}" stroke-width="${o.w||1.8}" ${o.d?`stroke-dasharray="${o.d}"`:''}/>`+
+    (o.head?arrowHead(x2,y2,Math.atan2(y2-cy,x2-cx)*180/Math.PI,o.c||L):'')+(o.tail?arrowHead(x1,y1,Math.atan2(y1-cy,x1-cx)*180/Math.PI,o.c||L):'');
+  /* 층 배치도: 3x3, 모서리 네 칸이 방 */
+  function plan(x,y,s,floor,rooms,o={}){
+    const c=s/3; let g=floor?txt(x+s/2,y-14,floor,{s:16}):'';
+    g+=`<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="rgba(238,241,248,.025)" stroke="${L}" stroke-width="2"/>`;
+    (o.hlCells||[]).forEach(([r,k])=>{g+=`<rect x="${x+k*c}" y="${y+r*c}" width="${c}" height="${c}" fill="${AC}" fill-opacity=".22"/>`;});
+    (o.dashCells||[]).forEach(([r,k])=>{g+=`<rect x="${x+k*c+3}" y="${y+r*c+3}" width="${c-6}" height="${c-6}" fill="none" stroke="${L}" stroke-dasharray="4 4"/>`;});
+    const pos={nw:[0,0],ne:[0,2],sw:[2,0],se:[2,2]};
+    for(const k in rooms){ const [r,cc]=pos[k]; const hl=(o.hl||[]).includes(k);
+      g+=`<rect x="${x+cc*c+3}" y="${y+r*c+3}" width="${c-6}" height="${c-6}" fill="${hl?AC:F}" fill-opacity="${hl?.28:1}" stroke="${hl?AC:L}" stroke-width="${hl?2.2:1.4}"/>`;
+      const lines=String(rooms[k]).split('\n'); g+=multi(x+cc*c+c/2,y+r*c+c/2,lines,{s:o.fs||Math.max(12,c*.17)});
+    }
+    return g;
+  }
+  function cube(x,y,w,h,d,o={}){
+    const dx=d*.75, dy=-d*.45;
+    let g=`<polygon points="${x},${y} ${x+w},${y} ${x+w},${y+h} ${x},${y+h}" fill="rgba(10,14,30,.85)" stroke="${L}" stroke-width="1.6"/>`;
+    g+=`<polygon points="${x},${y} ${x+dx},${y+dy} ${x+w+dx},${y+dy} ${x+w},${y}" fill="rgba(20,26,48,.9)" stroke="${L}" stroke-width="1.6"/>`;
+    g+=`<polygon points="${x+w},${y} ${x+w+dx},${y+dy} ${x+w+dx},${y+h+dy} ${x+w},${y+h}" fill="rgba(14,19,38,.9)" stroke="${L}" stroke-width="1.6"/>`;
+    if(o.inner){ g+=line(x+dx,y+dy,x+dx,y+h+dy,{d:'5 4'})+line(x+dx,y+h+dy,x,y+h,{d:'5 4'})+line(x+dx,y+h+dy,x+w+dx,y+h+dy,{d:'5 4'}); }
+    return g;
+  }
+  const north=(x,y,ang=-20)=>{const a=ang*Math.PI/180, x2=x+34*Math.cos(a), y2=y+34*Math.sin(a);
+    return line(x,y,x2,y2,{head:true,w:1.4})+txt(x-12,y+2,'북',{s:13});};
+  const person=(x,y,c=T)=>`<circle cx="${x}" cy="${y-9}" r="4.5" fill="${c}"/><rect x="${x-4}" y="${y-4}" width="8" height="15" rx="3" fill="${c}"/>`;
+  const lamp=(x,y)=>`<rect x="${x}" y="${y}" width="16" height="16" fill="#ffe9a8"/><rect x="${x-10}" y="${y-10}" width="36" height="36" fill="#ffe9a8" opacity=".15"/>`;
+  const carpetBar=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${AC}" fill-opacity=".55" stroke="${AC}"/>`;
+  const hose=(x1,y1,cx,cy,x2,y2)=>`<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}" fill="none" stroke="#d9a04a" stroke-width="4" stroke-linecap="round"/>`;
+  const note=(x,y,s,o={})=>txt(x,y,s,{s:o.s||12.5,a:o.a||'start',w:600,c:o.c||M});
+
+  const D={
+    A1(){ return plan(50,50,200,'3층',{nw:'식당',ne:'전송실',sw:'문태오',se:'김유진'},{hl:['se']})
+      + plan(50,320,200,'2층',{nw:'박다인',ne:'전송실',sw:'창고',se:'김미래'},{hl:['nw']})
+      + curve(210,225,170,300,95,345,{d:'6 5',head:true,tail:true}) + note(205,300,'두 방을 바꿈')
+      + cube(345,150,170,200,110) + txt(470,105,'큐브관',{s:16}) + north(372,118)
+      + line(495,195,495,345,{head:true,tail:true,w:1.3}) + note(503,270,'8m',{c:T,s:14})
+      + `<rect x="512" y="340" width="10" height="7" fill="#ffe9a8"/>`; },
+    A2(){ return plan(150,55,330,'1층',{nw:'김세영',ne:'전송실',sw:'한도경',se:'화장실'},{hl:['nw','sw']})
+      + person(270,150) + note(282,150,'한도경',{c:T}) + person(195,265) + note(207,265,'김세영',{c:T})
+      + curve(120,120,60,250,120,370,{d:'7 6',head:true,tail:true,w:2.2}) + note(20,250,'방',{c:T,s:14}) + note(20,270,'바꾸기',{c:T,s:14})
+      + note(150,420,'저녁을 먹는 동안 두 사람의 방을 바꿔 둔다',{s:14}); },
+    A3(){ return plan(150,55,330,'3층',{nw:'식당',ne:'전송실',sw:'김유진',se:'김세영'},{dashCells:[[1,0],[1,2]]})
+      + multi(118,220,['문이','위로','열림'],{s:13,c:M}) + multi(512,220,['문이','위로','열림'],{s:13,c:M})
+      + hose(205,330,315,280,425,330) + note(300,300,'호스',{c:'#d9a04a'})
+      + line(560,350,485,350,{head:true}) + note(500,372,'박다인',{c:T}); },
+    A4(){ const x=230,w=150,h=105,d=70; let g='';
+      g+=cube(x,300,w,h,d)+cube(x,195,w,h,d)+cube(x,90,w,h,d);
+      g+=multi(195,142,['한도경'],{s:15})+multi(195,247,['김미래'],{s:15})+multi(195,352,['화장실'],{s:15});
+      g+=carpetBar(x+w+8,195+8,10,h-16)+multi(x+w+d*.75+40,250,['카','펫'],{s:14,lh:18});
+      for(let i=0;i<3;i++){ g+=line(x+60+i*14,80,x+60+i*14,45,{d:'2 3',head:true}); g+=line(x+60+i*14,185,x+60+i*14,160,{d:'2 3',head:true}); }
+      g+=note(x+110,48,'반딧불이 빛',{s:12.5}); g+=`<rect x="${x+w/2-12}" y="${195+h-6}" width="24" height="10" fill="none" stroke="${T}"/>`+note(x+w/2+18,195+h+2,'문',{c:T});
+      g+=north(x+10,58,-15); return g; },
+    B1(){ return plan(160,55,330,'2층',{nw:'김유진',ne:'전송실',sw:'창고',se:'김미래'},{})
+      + carpetBar(160+110+8,55+330-14,94,10) + note(305,410,'카펫 (남쪽 벽)',{c:T,s:14,a:'middle'})
+      + line(325,365,325,120,{head:true,w:1.4}) + note(335,245,'8m',{c:T,s:15}); },
+    B2(){ return cube(150,130,300,260,180,{inner:true}) + txt(330,40,'한도경의 방',{s:17}) + north(500,60,0)
+      + lamp(165,260) + `<path d="M250,92 l18,10 l14,-6 l10,12 l20,-4" stroke="${T}" fill="none" stroke-width="2"/>`
+      + line(190,75,250,95,{head:true,w:1.2}) + note(110,70,'철판 조각',{c:T})
+      + person(320,370) + line(170,430,190,392,{head:true,w:1.2}) + note(140,446,'꺾인 모서리',{c:T})
+      + line(260,440,232,395,{head:true,w:1.2}) + note(262,450,'짧은 나이프',{c:T}); },
+    B3(){ return plan(160,55,330,'1층',{nw:'한도경',ne:'전송실',sw:'김세영',se:'화장실'},{})
+      + carpetBar(166,170,10,100) + multi(125,220,['카','펫'],{s:14,lh:18}) + line(140,220,162,220,{head:true,w:1.2})
+      + hose(440,310,360,240,320,200) + note(345,262,'호스',{c:'#d9a04a'}); },
+    B4(){ let g=plan(55,50,190,'2층',{nw:'김유진',ne:'전송실',sw:'창고',se:'김미래'},{});
+      g+=line(275,215,250,215,{head:true})+note(282,215,'박다인 시신',{c:T});
+      g+=note(150,262,'↑ 미래가 처음 깨어난 곳',{s:12.5});
+      g+=line(210,85,95,195,{d:'6 5',head:true})+note(95,140,'③ 203으로 감',{s:12.5,c:T})+note(95,156,'(103인 줄 앎)',{s:12});
+      g+=note(250,70,'① 아래층으로 세영 찾기',{s:12.5,c:T})+note(250,86,'(3층인 줄 앎)',{s:12});
+      g+=plan(55,310,190,'1층',{nw:'한도경',ne:'전송실',sw:'김세영',se:'화장실'},{hl:['ne']});
+      g+=note(252,330,'② 위 버튼',{s:12.5,c:T})+note(252,346,'(아래로 가는 줄 앎)',{s:12})+note(252,368,'카펫이 천장에',{s:12.5,c:T});
+      g+=cube(375,250,140,140,90)+txt(480,175,'304호',{s:20})+txt(480,150,'미래가 두 번째로 깨어난 방',{s:12.5,c:M})+line(352,372,373,372,{head:true})+note(334,372,'문',{c:T});
+      return g; },
+    C1(){ let g=plan(60,45,190,'4층',{nw:'식당',ne:'전송실',sw:'빈방',se:'박다인'},{hlCells:[[1,0],[1,1],[1,2],[0,1],[2,1]]});
+      g+=line(290,200,253,200,{head:true})+note(296,200,'잠듦',{c:T});
+      g+=note(268,62,'⑤ 위 버튼 (아래로 가는 줄 앎)',{s:12})+note(268,78,'카펫이 천장에',{s:12,c:T});
+      g+=note(268,120,'③ 문 두드림',{s:12,c:T})+note(268,136,'(한도경 방문인 줄 앎)',{s:12});
+      g+=note(268,166,'④ 사람 없는 아래층 방',{s:12,c:T});
+      g+=plan(60,300,190,'3층',{nw:'빈방',ne:'전송실',sw:'김세영',se:'김미래'},{hl:['nw']});
+      g+=line(25,330,57,330,{head:true})+note(4,312,'김유진',{c:T});
+      g+=line(125,330,190,330,{d:'5 4',head:true})+note(270,320,'① 문 열고 약속 장소로',{s:12,c:T})+note(270,336,'(301인 줄 앎)',{s:12});
+      g+=line(225,300,225,265,{d:'3 3',head:true})+note(270,284,'② 위로',{s:12,c:T});
+      return g; },
+    C2(){ return cube(150,120,300,270,180,{inner:true}) + txt(320,40,'한도경의 방',{s:17}) + north(500,52,0)
+      + lamp(170,250) + person(330,375)+person(352,375)+person(374,375)
+      + `<path d="M205,385 l12,-10 l10,6" stroke="${T}" fill="none" stroke-width="2"/>`
+      + line(250,440,218,392,{head:true,w:1.2}) + note(250,450,'짧은 나이프',{c:T}); },
+    C3(){ let g=plan(160,55,330,'1층',{nw:'김유진',ne:'전송실',sw:'문태오',se:'화장실'},{hlCells:[[1,1]]});
+      g+=curve(270,165,215,170,220,220,{d:'4 4'})+curve(380,165,435,170,430,220,{d:'4 4'})+curve(270,275,215,270,220,220,{d:'4 4'})+curve(380,275,430,270,430,220,{d:'4 4'});
+      g+=txt(325,215,'카펫이',{s:13})+txt(325,233,'천장에',{s:13});
+      g+=hose(440,330,395,290,355,250); g+=note(452,300,'호스',{c:'#d9a04a'});
+      g+=line(110,430,262,268,{head:true,w:1.2})+note(40,448,'문태오 방 입구',{c:T});
+      g+=note(325,470,'1층 문을 모두 180°로 열면 가운데에 방 하나 크기의 공간이 생긴다',{c:T,s:13,a:'middle'});
+      return g; },
+    C4(){ return plan(160,55,330,'2층',{nw:'한도경',ne:'전송실',sw:'창고',se:'빈방'},{hl:['se']})
+      + line(545,330,492,330,{head:true}) + note(500,352,'김미래',{c:T})
+      + `<rect x="${160+220+40}" y="${55+220+2}" width="14" height="11" rx="2" fill="${T}"/><path d="M${427},${278} v-6 a7 7 0 0 1 14 0 v6" stroke="${T}" fill="none" stroke-width="2"/>`
+      + note(395,262,'잠김',{c:T}); }
+  };
+  return { draw(code,accent){ AC=accent; const f=D[code]; return f?`<svg viewBox="0 0 600 540" xmlns="http://www.w3.org/2000/svg" font-family="Nanum Myeongjo, serif">${f()}</svg>`:''; } };
+})();
+
+const ROUND={A:["첫 번째 해답","#d8c53f"],B:["두 번째 해답","#6f9be8"],C:["세 번째 해답","#d0645a"]};
+function showAnswer(s){
+  const [rname,acc]=ROUND[s.answer[0]]; const box=document.getElementById("ans");
+  box.style.setProperty("--acc",acc);
+  document.getElementById("aBadge").textContent="해답 "+s.answer;
+  document.getElementById("aRound").textContent=rname;
+  document.getElementById("aTitle").textContent=s.case;
+  document.getElementById("aFig").innerHTML=DG.draw(s.answer,acc);
+  const [q,a]=ANSWERS[s.answer][s.part];
+  const qe=document.getElementById("aQ"), ae=document.getElementById("aA");
+  qe.textContent = q ? (s.parts>1?`수수께끼 ${s.part+1}. `:"")+q : ""; qe.style.display=q?"":"none";
+  ae.textContent=a; fitAnswer();
+}
+function fitAnswer(){
+  const tx=document.getElementById("aTx"), qe=document.getElementById("aQ"), ae=document.getElementById("aA");
+  let fs=Math.min(window.innerWidth*0.021, 34);
+  const min=Math.max(12, window.innerWidth*0.0105);
+  do{ ae.style.fontSize=fs+"px"; qe.style.fontSize=(fs*1.06)+"px"; fs-=0.5; }
+  while(fs>min && (tx.scrollHeight>tx.clientHeight+2));
+}
+addEventListener("resize",()=>{ if(cur>=0&&SCENES[cur].answer) fitAnswer(); });
+
 
 /* ---------- 뉴스 자막: 녹음 파일의 문장 사이 쉼에 맞춘 시간(초) ---------- */
 const HEADLINES = [   /* [이 자막부터, 분야, 헤드라인] */
@@ -175,7 +597,7 @@ const HEADLINES = [   /* [이 자막부터, 분야, 헤드라인] */
   [10, "사회", "‘악마의 정육면체’ 큐브관은 어떤 곳?"],
   [12, "사회", "경찰, 정확한 사망 경위 수사 중"]
 ];
-/* 자막: [시작초, 끝초, 문장] — 나레이션 파일 기준 시간(나레이션 0초 = 첫 마디). 문장 끝의 긴 쉼에 맞춤. 태블릿에서 #sync로 다시 맞출 수 있음 */
+/* 자막: [시작초, 끝초, 문장] — 나레이션 파일 기준 시간. 태블릿에서 직접 맞춘 값으로 고정. 태블릿에서 #sync로 다시 맞출 수 있음 */
 let CAPTIONS = [
   [0.2, 3.5, "2030년 8월 21일, 저녁 뉴스입니다."],
   [3.6, 5.6, "먼저 환경 소식입니다."],
@@ -193,7 +615,7 @@ let CAPTIONS = [
   [71.6, 74.6, "「큐브관 사건」 수사 소식은 계속 전해드리겠습니다."]
 ];
 /* 태블릿에서 맞춘 시간이 있으면 그걸 씀 */
-try{ const saved=JSON.parse(localStorage.getItem("cube_caps_v2")||"null");
+try{ const saved=JSON.parse(localStorage.getItem("cube_caps_v3")||"null");
   if(Array.isArray(saved)&&saved.length===CAPTIONS.length) saved.forEach((v,k)=>{CAPTIONS[k][0]=v[0];CAPTIONS[k][1]=v[1];}); }catch(e){}
 /* 뉴스 배경음악: 앞부분은 크게, 말하는 동안 작게, 끝나면 살짝 올렸다가 사라짐 */
 const NB = new Audio("bgm/news_bgm.mp3"); NB.preload="auto"; NB.loop=false; NB.volume=0;
@@ -301,13 +723,16 @@ function go(i){
   if(i<0||i>=SCENES.length||i===cur) return;
   cur=i; const s=SCENES[i];
   tw.classList.add("out");
-  setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
+  if(!s.answer) setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
     tw.classList.remove("out"); }, 900);
   stage.classList.toggle("dim",!!s.dim);
+  stage.classList.toggle("answer",!!s.answer);
+  if(s.answer) showAnswer(s);
   if(stage.classList.contains("news") && !s.news) newsStop();
   stage.classList.toggle("news",!!s.news);
   if(s.news) setHeadline(0,true);
-  playTrack(s.track);
+  const live=A[front];
+  if(!(s.track && live._key===s.track && !live.paused && s.track!=="news")) playTrack(s.track);
   // 다음 곡 미리 받아두기 (재생 중인 플레이어는 건드리지 않음)
   const n=SCENES[i+1]; if(n&&n.track&&n.track!=="news"){ pre.src=src(n.track); pre.load(); }
 }
@@ -354,12 +779,12 @@ if(location.hash==="#sync"){
   };
   const finish=()=>{
     const out=CAPTIONS.map((c,i)=>{ const st=marks[i]; const en= i+1<marks.length? marks[i+1]-0.1 : st+(c[1]-c[0]); return [Math.round(st*10)/10, Math.round(en*10)/10]; });
-    localStorage.setItem("cube_caps_v2",JSON.stringify(out));
+    localStorage.setItem("cube_caps_v3",JSON.stringify(out));
     const code=out.map((v,i)=>`  [${v[0].toFixed(1)}, ${v[1].toFixed(1)}, "${CAPTIONS[i][2]}"]`).join(",\n");
     box.innerHTML=`<b>저장했습니다.</b> 이 태블릿에서는 이제 이 시간으로 자막이 나옵니다. 다른 기기에도 쓰려면 아래 내용을 index.html의 CAPTIONS에 붙여넣으세요.<textarea readonly>${code}</textarea>
       <div class="row"><button id="sAgain">다시 맞추기</button><button id="sReset">원래대로 되돌리기</button><button id="sDone">끝내기</button></div>`;
     $("sAgain").onclick=e=>{e.stopPropagation(); location.reload();};
-    $("sReset").onclick=e=>{e.stopPropagation(); localStorage.removeItem("cube_caps_v2"); toast("원래 시간으로 되돌렸습니다."); };
+    $("sReset").onclick=e=>{e.stopPropagation(); localStorage.removeItem("cube_caps_v3"); toast("원래 시간으로 되돌렸습니다."); };
     $("sDone").onclick=e=>{e.stopPropagation(); location.hash=""; location.reload();};
   };
   const onTap=e=>{
