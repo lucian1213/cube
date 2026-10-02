@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060a16">
+<title>큐브관 살인사건 전말</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#060a16; --mist:#8d9bbb; --star:#eef1f8; --firefly:#d8c53f; --line:rgba(238,241,248,.18);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%}
+body{height:100%;margin:0;background:var(--night);color:var(--star);overflow:hidden;
+  font-family:"Nanum Myeongjo","Noto Serif KR",serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+
+.stage{position:fixed;inset:0;overflow:hidden}
+.art{position:absolute;inset:-2%;background:url("bg.jpg") center/cover no-repeat;
+  filter:saturate(.85) brightness(.55);transform:scale(1.02);transition:filter 2.4s ease}
+.stage.dim .art{filter:saturate(.6) brightness(.3)}
+.veil{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 58%,rgba(6,10,22,0) 0%,rgba(6,10,22,.55) 55%,rgba(6,10,22,.92) 100%),
+             linear-gradient(180deg,rgba(6,10,22,.65) 0%,rgba(6,10,22,0) 28%,rgba(6,10,22,0) 55%,rgba(6,10,22,.9) 100%)}
+canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+.brand{position:absolute;top:calc(env(safe-area-inset-top,0px) + 3.2vh);left:4vw;pointer-events:none;
+  font-weight:800;color:var(--firefly);letter-spacing:.04em;font-size:clamp(14px,1.9vw,26px);line-height:1.25;opacity:.92}
+.brand small{display:block;font-weight:400;color:var(--mist);font-size:.48em;letter-spacing:.38em;margin-top:.5em}
+
+.title-wrap{position:absolute;left:6vw;right:6vw;bottom:15vh;text-align:center;pointer-events:none}
+.scene-num{font-weight:700;color:var(--firefly);font-size:clamp(18px,2.6vw,38px);letter-spacing:.3em;text-indent:.3em;
+  margin-bottom:1.4vh;min-height:1.2em}
+.scene-title{font-weight:800;font-size:clamp(34px,6.2vw,92px);line-height:1.18;text-shadow:0 2px 30px rgba(0,0,0,.6);word-break:keep-all}
+.scene-sub{margin-top:2.2vh;color:var(--mist);font-size:clamp(13px,1.55vw,22px);letter-spacing:.08em;min-height:1.4em}
+.title-wrap .t{transition:opacity 1.1s ease,transform 1.1s ease}
+.title-wrap.out .t{opacity:0;transform:translateY(8px)}
+
+/* 화면 반쪽씩: 왼쪽 이전, 오른쪽 다음 */
+.zone{position:absolute;top:0;bottom:0;width:50%;border:0;padding:0;margin:0;background:transparent;cursor:pointer}
+.zone.prev{left:0}.zone.next{right:0}
+.zone:focus-visible{outline:2px solid var(--firefly);outline-offset:-6px}
+.zone .hint{position:absolute;top:50%;width:46px;height:46px;margin-top:-23px;border-radius:50%;
+  display:grid;place-items:center;color:var(--star);background:rgba(6,10,22,.4);opacity:0;transition:opacity .5s}
+.zone.prev .hint{left:2.4vw}.zone.next .hint{right:2.4vw}
+.zone.flash .hint{opacity:.85;transition:none}
+.zone .hint svg{width:22px;height:22px}
+
+.counter{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 2.4vh);transform:translateX(-50%);
+  color:var(--mist);font-size:13px;letter-spacing:.12em;opacity:.45;pointer-events:none}
+
+.full{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:calc(env(safe-area-inset-right,0px) + 14px);
+  width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(6,10,22,.35);color:var(--mist);
+  display:grid;place-items:center;opacity:.45;cursor:pointer;z-index:5}
+.full:focus-visible{outline:2px solid var(--firefly);outline-offset:2px;opacity:1}
+.full svg{width:18px;height:18px}
+
+.start{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;pointer-events:none;
+  padding:14px 22px;border-radius:14px;border:1px solid var(--line);background:rgba(6,10,22,.55);
+  color:var(--star);font-size:clamp(15px,1.7vw,22px);letter-spacing:.06em;transition:opacity .6s}
+.start.gone{opacity:0}
+.toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 18px);transform:translateX(-50%);z-index:6;
+  padding:10px 16px;border-radius:10px;background:rgba(8,13,28,.92);border:1px solid var(--line);font-size:14px;
+  opacity:0;transition:opacity .3s;pointer-events:none;max-width:86vw;text-align:center}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){ .title-wrap .t,.art{transition:none} }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="art"></div>
+  <canvas id="flies"></canvas>
+  <div class="veil"></div>
+  <div class="brand">큐브관 살인사건 전말<small>MURDER IN THE CUBE</small></div>
+  <div class="title-wrap" id="titleWrap">
+    <div class="t scene-num" id="sceneNum"></div>
+    <div class="t scene-title" id="sceneTitle">큐브관 살인사건 전말</div>
+    <div class="t scene-sub" id="sceneSub"></div>
+  </div>
+  <div class="counter" id="counter"></div>
+
+  <button class="zone prev" id="zPrev" aria-label="이전 장면">
+    <span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></span>
+  </button>
+  <button class="zone next" id="zNext" aria-label="다음 장면">
+    <span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></span>
+  </button>
+
+  <button class="full" id="bFull" aria-label="전체 화면">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+  </button>
+  <div class="start" id="start">화면을 눌러 시작</div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* 음원은 bgm 폴더에 같은 이름으로 넣어두세요. news.mp3는 녹음 후 추가. */
+const SCENES = [
+  {num:"",     title:"큐브관 살인사건 전말",            sub:"",                  track:"flight"},
+  {num:"",     title:"오프닝 뉴스",                     sub:"2030년 8월 21일",   track:"news", dim:true},
+  {num:"하나", title:"「불빛이 심연으로 가라앉았다」",   sub:"",                  track:"sidewinder"},
+  {num:"둘",   title:"「뒤집힘 · 있을 수 없는 추락」",   sub:"",                  track:"phantom"},
+  {num:"셋",   title:"「밀실 속 보이지 않는 칼날」",     sub:"",                  track:"sneaking"},
+  {num:"넷",   title:"「빈방에서 물에 빠져 죽다」",      sub:"",                  track:"darkness"},
+  {num:"다섯", title:"「갇힌 짐승의 마지막 잠」",        sub:"",                  track:"stinger"},
+  {num:"여섯", title:"「천사가 내려온 자리」",           sub:"",                  track:"dayone"},
+  {num:"",     title:"두 번째 해답",                     sub:"",                  track:"profiling"},
+  {num:"",     title:"단서 뒤바뀜",                      sub:"",                  track:"time"},
+  {num:"",     title:"레드 헤링",                        sub:"",                  track:"kyoto"},
+  {num:"",     title:"세 번째 해답",                     sub:"",                  track:"chariot_main"},
+  {num:"",     title:"「사랑을 재는 단위」",             sub:"천사들의 짧은 무대", track:"aqua"},
+  {num:"",     title:"일기 조각의 주인",                 sub:"",                  track:"chariot_ai"},
+  {num:"",     title:"「만약 그때……」",                  sub:"",                  track:"summer"},
+  {num:"",     title:"「별에 새긴 약속」",               sub:"",                  track:"stay", dim:true}
+];
+const src = key => `bgm/${key}.mp3`;
+
+/* ---------- 두 플레이어로 교차 재생 ---------- */
+const A=[new Audio(),new Audio()]; A.forEach(a=>{a.loop=true;a.preload="auto";a.volume=0;});
+let front=0, cur=-1, started=false;
+const pre=new Audio(); pre.preload="auto"; pre.muted=true;
+const FADE=2600, VOL=1;
+function ramp(a,to,ms,done){
+  const from=a.volume, t0=performance.now();
+  if(a._raf) cancelAnimationFrame(a._raf);
+  const step=t=>{const k=Math.min(1,(t-t0)/ms); a.volume=Math.max(0,Math.min(1,from+(to-from)*k));
+    if(k<1) a._raf=requestAnimationFrame(step); else {a._raf=null; done&&done();}};
+  a._raf=requestAnimationFrame(step);
+}
+function playTrack(key){
+  const old=A[front];
+  ramp(old,0,FADE,()=>old.pause());
+  if(!key) return;
+  front=1-front; const a=A[front];
+  if(a._key!==key){ a.src=src(key); a._key=key; }
+  a.currentTime=0; a.volume=0;
+  a.play().then(()=>ramp(a,VOL,FADE)).catch(()=>{
+    if(key==="news") toast("뉴스 파일(bgm/news.mp3)이 아직 없습니다.");
+    else toast("음악을 재생하지 못했습니다. 화면을 한 번 더 눌러주세요.");
+  });
+}
+
+/* ---------- 장면 ---------- */
+const $=id=>document.getElementById(id);
+const tw=$("titleWrap"), stage=$("stage");
+function go(i){
+  if(i<0||i>=SCENES.length||i===cur) return;
+  cur=i; const s=SCENES[i];
+  tw.classList.add("out");
+  setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
+    tw.classList.remove("out"); }, 900);
+  stage.classList.toggle("dim",!!s.dim);
+  $("counter").textContent=`${i} / ${SCENES.length-1}`;
+  playTrack(s.track);
+  // 다음 곡 미리 받아두기 (재생 중인 플레이어는 건드리지 않음)
+  const n=SCENES[i+1]; if(n&&n.track&&n.track!=="news"){ pre.src=src(n.track); pre.load(); }
+}
+
+let last=0;
+function tap(dir,el){
+  const now=Date.now(); if(now-last<700) return; last=now;   // 두 번 눌림 방지
+  keepAwake();
+  if(!started){ started=true; $("start").classList.add("gone"); go(0); return; }
+  el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),60);
+  if(dir>0){ if(cur>=SCENES.length-1) toast("마지막 장면입니다."); else go(cur+1); }
+  else     { if(cur<=0) toast("첫 장면입니다."); else go(cur-1); }
+}
+$("zNext").addEventListener("click",e=>tap(1,e.currentTarget));
+$("zPrev").addEventListener("click",e=>tap(-1,e.currentTarget));
+addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){ e.preventDefault(); tap(1,$("zNext")); }
+  if(e.key==="ArrowLeft"||e.key==="PageUp"){ e.preventDefault(); tap(-1,$("zPrev")); }
+});
+
+/* ---------- 전체 화면 · 화면 꺼짐 방지 ---------- */
+$("bFull").addEventListener("click",async e=>{
+  e.stopPropagation();
+  try{ if(!document.fullscreenElement) await document.documentElement.requestFullscreen({navigationUI:"hide"}); else await document.exitFullscreen(); }
+  catch(err){ toast("전체 화면을 열지 못했습니다. 크롬 메뉴를 이용해주세요."); }
+});
+let lock=null;
+async function keepAwake(){
+  if(lock||!("wakeLock" in navigator)) return;
+  try{ lock=await navigator.wakeLock.request("screen"); lock.addEventListener("release",()=>{lock=null;}); }catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&started) keepAwake(); });
+
+let tt; function toast(m){const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),3200);}
+
+/* ---------- 반딧불이 ---------- */
+(function(){
+  const c=$("flies"), x=c.getContext("2d"); let W,H,dpr; const F=[];
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){dpr=Math.min(2,devicePixelRatio||1); W=c.width=innerWidth*dpr; H=c.height=innerHeight*dpr;}
+  size(); addEventListener("resize",size);
+  for(let i=0;i<26;i++) F.push({x:Math.random(),y:.35+Math.random()*.65,r:1+Math.random()*2.2,
+    vx:(Math.random()-.5)*.00012,vy:-(.00005+Math.random()*.00012),p:Math.random()*6.28,s:.4+Math.random()*.9});
+  function draw(t){
+    x.clearRect(0,0,W,H);
+    for(const f of F){
+      if(!still){ f.x+=f.vx+Math.sin(t/4000+f.p)*.00006; f.y+=f.vy; if(f.y<-.02){f.y=1.02;f.x=Math.random();} }
+      const a=.25+.55*(.5+.5*Math.sin(t/900*f.s+f.p)), px=f.x*W, py=f.y*H, r=f.r*dpr;
+      const g=x.createRadialGradient(px,py,0,px,py,r*7); g.addColorStop(0,`rgba(232,212,80,${a})`); g.addColorStop(1,"rgba(232,212,80,0)");
+      x.fillStyle=g; x.beginPath(); x.arc(px,py,r*7,0,6.283); x.fill();
+    }
+    if(!still) requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
