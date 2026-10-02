@@ -51,8 +51,6 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .zone.flash .hint{opacity:.85;transition:none}
 .zone .hint svg{width:22px;height:22px}
 
-.counter{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 2.4vh);transform:translateX(-50%);
-  color:var(--mist);font-size:13px;letter-spacing:.12em;opacity:.45;pointer-events:none}
 
 .full{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:calc(env(safe-area-inset-right,0px) + 14px);
   width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(6,10,22,.35);color:var(--mist);
@@ -82,7 +80,6 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
     <div class="t scene-title" id="sceneTitle">큐브관 살인사건 전말</div>
     <div class="t scene-sub" id="sceneSub"></div>
   </div>
-  <div class="counter" id="counter"></div>
 
   <button class="zone prev" id="zPrev" aria-label="이전 장면">
     <span class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></span>
@@ -155,7 +152,6 @@ function go(i){
   setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
     tw.classList.remove("out"); }, 900);
   stage.classList.toggle("dim",!!s.dim);
-  $("counter").textContent=`${i} / ${SCENES.length-1}`;
   playTrack(s.track);
   // 다음 곡 미리 받아두기 (재생 중인 플레이어는 건드리지 않음)
   const n=SCENES[i+1]; if(n&&n.track&&n.track!=="news"){ pre.src=src(n.track); pre.load(); }
@@ -167,8 +163,8 @@ function tap(dir,el){
   keepAwake();
   if(!started){ started=true; $("start").classList.add("gone"); go(0); return; }
   el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),60);
-  if(dir>0){ if(cur>=SCENES.length-1) toast("마지막 장면입니다."); else go(cur+1); }
-  else     { if(cur<=0) toast("첫 장면입니다."); else go(cur-1); }
+  if(dir>0){ if(cur>=SCENES.length-1) null; else go(cur+1); }
+  else     { if(cur<=0) null; else go(cur-1); }
 }
 $("zNext").addEventListener("click",e=>tap(1,e.currentTarget));
 $("zPrev").addEventListener("click",e=>tap(-1,e.currentTarget));
