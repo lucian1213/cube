@@ -66,12 +66,52 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   padding:10px 16px;border-radius:10px;background:rgba(8,13,28,.92);border:1px solid var(--line);font-size:14px;
   opacity:0;transition:opacity .3s;pointer-events:none;max-width:86vw;text-align:center}
 .toast.show{opacity:1}
-@media (prefers-reduced-motion: reduce){ .title-wrap .t,.art{transition:none} }
+.newsart{position:absolute;inset:0;background:url("news.jpg") center/cover no-repeat;opacity:0;transition:opacity 1.6s ease}
+.brand,.title-wrap,canvas#flies{transition:opacity 1.2s ease}
+.stage.news .newsart{opacity:1}
+.stage.news .brand,.stage.news .title-wrap,.stage.news canvas#flies,.stage.news .veil{opacity:0}
+.newsui{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s ease .4s}
+.stage.news .newsui{opacity:1}
+.bug{position:absolute;top:calc(env(safe-area-inset-top,0px) + 3.4vh);left:3.2vw;display:flex;align-items:center;gap:.8vw}
+.bug .mark{width:clamp(10px,1vw,16px);height:clamp(10px,1vw,16px);background:var(--firefly)}
+.bug .ch{font-weight:800;font-size:clamp(14px,1.7vw,24px);letter-spacing:.06em}
+.bug .dt{color:var(--mist);font-size:clamp(12px,1.25vw,18px);letter-spacing:.1em;margin-left:.4vw}
+.lower{position:absolute;left:3.2vw;right:3.2vw;bottom:calc(env(safe-area-inset-bottom,0px) + 10.5vh);
+  display:flex;align-items:stretch;background:rgba(6,10,22,.86);border-top:2px solid var(--firefly);
+  box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.lower .tag{flex:0 0 auto;display:grid;place-items:center;padding:0 1.6vw;background:var(--firefly);color:#15130a;
+  font-weight:800;font-size:clamp(14px,1.8vw,26px);letter-spacing:.12em}
+.lower .hl{flex:1;min-width:0;padding:1.6vh 2vw;font-weight:800;font-size:clamp(20px,3.1vw,46px);line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .45s ease,transform .45s ease}
+.lower .hl.swap{opacity:0;transform:translateY(10px)}
+.cap{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 27vh);
+  width:min(84vw,1200px);text-align:center;font-weight:700;font-size:clamp(16px,2.15vw,32px);line-height:1.5;word-break:keep-all;
+  padding:.5em 1em;background:rgba(6,10,22,.72);text-wrap:balance;border-radius:6px;text-shadow:0 1px 3px rgba(0,0,0,.6);
+  transition:opacity .35s ease}
+.cap.off{opacity:0}
+.ticker{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 3.6vh);height:clamp(30px,5.2vh,52px);
+  display:flex;align-items:center;background:rgba(15,26,51,.94);overflow:hidden}
+.ticker .lab{flex:0 0 auto;height:100%;display:grid;place-items:center;padding:0 1.4vw;background:#1c2a4f;
+  color:var(--firefly);font-weight:700;font-size:clamp(12px,1.4vw,20px);letter-spacing:.08em;z-index:1}
+.ticker .run{display:flex;white-space:nowrap;will-change:transform;animation:run 70s linear infinite}
+.ticker .run span{font-size:clamp(13px,1.55vw,22px);padding-right:3vw;color:var(--star)}
+.ticker .run span::before{content:"";display:inline-block;width:.45em;height:.45em;background:var(--firefly);margin:0 1.1vw 0 0;vertical-align:.15em}
+@keyframes run{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.sync{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 9vh);transform:translateX(-50%);z-index:7;
+  width:min(86vw,980px);padding:16px 20px;border-radius:12px;background:rgba(8,13,28,.94);border:1px solid var(--firefly);
+  font-size:clamp(14px,1.6vw,20px);line-height:1.6;pointer-events:none}
+.sync b{color:var(--firefly)}
+.sync textarea{width:100%;height:30vh;margin-top:10px;background:#0b1224;color:var(--star);border:1px solid var(--line);
+  border-radius:8px;font:13px/1.5 monospace;padding:8px;pointer-events:auto}
+.sync .row{display:flex;gap:10px;margin-top:10px;pointer-events:auto}
+.sync button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:rgba(238,241,248,.08);font-weight:700}
+@media (prefers-reduced-motion: reduce){ .title-wrap .t,.art{transition:none} .ticker .run{animation-duration:140s} }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
   <div class="art"></div>
+  <div class="newsart"></div>
   <canvas id="flies"></canvas>
   <div class="veil"></div>
   <div class="brand">큐브관 살인사건 전말<small>MURDER IN THE CUBE</small></div>
@@ -79,6 +119,13 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
     <div class="t scene-num" id="sceneNum"></div>
     <div class="t scene-title" id="sceneTitle">큐브관 살인사건 전말</div>
     <div class="t scene-sub" id="sceneSub"></div>
+  </div>
+
+  <div class="newsui" aria-hidden="true">
+    <div class="bug"><span class="mark"></span><span class="ch">저녁 뉴스</span><span class="dt">2030. 8. 21</span></div>
+    <div class="cap off" id="nCap"></div>
+    <div class="lower"><div class="tag" id="nTag">뉴스</div><div class="hl" id="nHl">2030년 8월 21일 저녁 뉴스</div></div>
+    <div class="ticker"><div class="lab">주요 뉴스</div><div class="run" id="nRun"></div></div>
   </div>
 
   <button class="zone prev" id="zPrev" aria-label="이전 장면">
@@ -93,13 +140,14 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   </button>
   <div class="start" id="start">화면을 눌러 시작</div>
   <div class="toast" id="toast"></div>
+  <div class="sync" id="sync" hidden></div>
 </div>
 
 <script>
 /* 음원은 bgm 폴더에 같은 이름으로 넣어두세요. news.mp3는 녹음 후 추가. */
 const SCENES = [
   {num:"",     title:"큐브관 살인사건 전말",            sub:"",                  track:"flight"},
-  {num:"",     title:"오프닝 뉴스",                     sub:"2030년 8월 21일",   track:"news", dim:true},
+  {num:"",     title:"오프닝 뉴스",                     sub:"2030년 8월 21일",   track:"news", news:true},
   {num:"하나", title:"「불빛이 심연으로 가라앉았다」",   sub:"",                  track:"sidewinder"},
   {num:"둘",   title:"「뒤집힘 · 있을 수 없는 추락」",   sub:"",                  track:"phantom"},
   {num:"셋",   title:"「밀실 속 보이지 않는 칼날」",     sub:"",                  track:"sneaking"},
@@ -116,6 +164,98 @@ const SCENES = [
   {num:"",     title:"「별에 새긴 약속」",               sub:"",                  track:"stay", dim:true}
 ];
 const src = key => `bgm/${key}.mp3`;
+
+/* ---------- 뉴스 자막: 녹음 파일의 문장 사이 쉼에 맞춘 시간(초) ---------- */
+const HEADLINES = [   /* [이 자막부터, 분야, 헤드라인] */
+  [0,  "뉴스", "2030년 8월 21일 저녁 뉴스"],
+  [1,  "환경", "대기오염 심화… ‘달도 별도 볼 수 없는 시대’로"],
+  [6,  "사회", "폐광 지대 「큐브관」서 6명 숨진 채 발견"],
+  [8,  "사회", "함께 방문한 남녀 6명 전원 사망… 생존자 없어"],
+  [9,  "사회", "사망자 중 「큐브관」 설계한 건축가 포함"],
+  [10, "사회", "‘악마의 정육면체’ 큐브관은 어떤 곳?"],
+  [12, "사회", "경찰, 정확한 사망 경위 수사 중"]
+];
+/* 자막: [시작초, 끝초, 문장] — 녹음 파일의 실제 쉼과 음절에 맞춤. 태블릿에서 #sync로 다시 맞출 수 있음 */
+let CAPTIONS = [
+  [3.3,  6.5,  "2030년 8월 21일, 저녁 뉴스입니다."],
+  [6.6,  8.6,  "먼저 환경 소식입니다."],
+  [8.7,  14.2, "최근 2년 사이 대기오염이 크게 심해지면서, 하늘을 볼 수 있는 거리가 눈에 띄게 줄었습니다."],
+  [14.25,18.8, "낮에도 햇빛이 점점 흐려져, 도시마다 조명을 늘려 어둠을 메우고 있습니다."],
+  [18.85,22.8, "밤에는 달빛과 별빛이 더 이상 땅에 닿지 못할 만큼 약해졌습니다."],
+  [23.6, 28.4, "올해부터 인류는, 달도 별도 볼 수 없는 시대를 맞았습니다."],
+  [29.5, 30.9, "다음은 사회 소식입니다."],
+  [31.6, 36.6, "강원도 폐광 지대에 있는 건축물, 「큐브관」에서 시신 여섯 구가 발견됐습니다."],
+  [37.3, 46.3, "경찰 조사 결과, 숨진 이들은 며칠 전 함께 큐브관을 찾았던 남성 세 명과 여성 세 명으로, 생존자는 없는 것으로 확인됐습니다."],
+  [47.1, 51.8, "사망자 가운데에는 큐브관을 설계한 건축가 김유진 씨도 포함돼 있습니다."],
+  [52.6, 58.8, "큐브관은 한 변이 12미터인 정육면체 건축물로, 국내외 건축상을 여럿 받은 작품입니다."],
+  [59.5, 67.3, "겉면 전체가 새까맣고, 사람 없는 땅 한가운데에 비석처럼 홀로 서 있어, 「악마의 정육면체」라고도 불립니다."],
+  [68.0, 70.7, "경찰은 정확한 사망 경위를 조사하고 있습니다."],
+  [71.2, 74.2, "「큐브관 사건」 수사 소식은 계속 전해드리겠습니다."]
+];
+/* 태블릿에서 맞춘 시간이 있으면 그걸 씀 */
+try{ const saved=JSON.parse(localStorage.getItem("cube_caps")||"null");
+  if(Array.isArray(saved)&&saved.length===CAPTIONS.length) saved.forEach((v,k)=>{CAPTIONS[k][0]=v[0];CAPTIONS[k][1]=v[1];}); }catch(e){}
+/* 뉴스 배경음악: 앞부분은 크게, 말하는 동안 작게, 끝나면 살짝 올렸다가 사라짐 */
+const NB = new Audio("bgm/news_bgm.mp3"); NB.preload="auto"; NB.loop=false; NB.volume=0;
+const NB_LOUD=.85, NB_UNDER=.13; let VOICE_START=CAPTIONS[0][0], VOICE_END=CAPTIONS[CAPTIONS.length-1][1];
+function nbTarget(t){
+  if(t < VOICE_START-0.6) return NB_LOUD;
+  if(t < VOICE_START)     return NB_LOUD + (NB_UNDER-NB_LOUD)*((t-(VOICE_START-0.6))/0.6);
+  if(t < VOICE_END)       return NB_UNDER;
+  if(t < VOICE_END+2.5)   return NB_UNDER + (.5-NB_UNDER)*((t-VOICE_END)/2.5);
+  if(t < VOICE_END+7)     return .5*(1-(t-VOICE_END-2.5)/4.5);
+  return 0;
+}
+let nbRaf=null, newsVoice=null;
+function nbLoop(){
+  if(!newsVoice){ nbRaf=null; return; }
+  const t = newsVoice.ended ? VOICE_END+8 : newsVoice.currentTime;
+  NB.volume=Math.max(0,Math.min(1,nbTarget(t)));
+  if(t>VOICE_END+7){ NB.pause(); nbRaf=null; return; }
+  nbRaf=requestAnimationFrame(nbLoop);
+}
+function newsStart(voice){
+  newsVoice=voice; NB.currentTime=0; NB.volume=NB_LOUD;
+  NB.play().catch(()=>{}); if(!nbRaf) nbRaf=requestAnimationFrame(nbLoop);
+}
+function newsStop(){
+  newsVoice=null; if(nbRaf){cancelAnimationFrame(nbRaf); nbRaf=null;}
+  ramp(NB,0,1500,()=>NB.pause());
+  const c=document.getElementById("nCap"); c.classList.add("off");
+}
+let capIdx=-2;
+function syncCaption(a){
+  const t=a.currentTime; let k=-1;
+  for(let j=0;j<CAPTIONS.length;j++) if(t>=CAPTIONS[j][0]&&t<CAPTIONS[j][1]) k=j;
+  if(k===capIdx) return; capIdx=k;
+  const c=document.getElementById("nCap");
+  if(k<0){ c.classList.add("off"); return; }
+  c.textContent=CAPTIONS[k][2]; c.classList.remove("off");
+}
+const TICKER = [
+  "천문대 관측 중단 잇따라… ‘별 없는 하늘’ 2년째",
+  "환경부, 도심 야간 조명 확대 지원책 발표",
+  "기상청 “내일 전국 흐리고 미세먼지 매우 나쁨”",
+  "강원 폐광 지대 일대 통행 통제… 출입 자제 당부",
+  "정선 미술관 붕괴 사고 3년… 유가족 추모 행사 열려",
+  "중국 우주기업 ‘앙시’, 차세대 우주선 시험 발사 예정",
+  "「큐브관」 완공 1주년… 건축계 재조명",
+  "태백산 일대 반딧불이 서식지 확대 관측"
+];
+(function(){ const run=document.getElementById("nRun");
+  const once=TICKER.map(t=>`<span>${t}</span>`).join(""); run.innerHTML=once+once; })();
+let hlIdx=-1;
+function setHeadline(k,instant){
+  if(k===hlIdx) return; hlIdx=k; const [_,tag,text]=HEADLINES[k];
+  const hl=document.getElementById("nHl"), tg=document.getElementById("nTag");
+  if(instant){ hl.textContent=text; tg.textContent=tag; return; }
+  hl.classList.add("swap");
+  setTimeout(()=>{ hl.textContent=text; tg.textContent=tag; hl.classList.remove("swap"); },450);
+}
+function syncHeadline(a){
+  let k=0; for(let j=0;j<HEADLINES.length;j++) if(a.currentTime>=CAPTIONS[HEADLINES[j][0]][0]-0.2) k=j;
+  setHeadline(k);
+}
 
 /* ---------- 두 플레이어로 교차 재생 ---------- */
 const A=[new Audio(),new Audio()]; A.forEach(a=>{a.loop=true;a.preload="auto";a.volume=0;});
@@ -135,8 +275,11 @@ function playTrack(key){
   if(!key) return;
   front=1-front; const a=A[front];
   if(a._key!==key){ a.src=src(key); a._key=key; }
+  a.loop = key!=="news";
+  a.ontimeupdate = key==="news" ? ()=>{ syncHeadline(a); syncCaption(a); } : null;
   a.currentTime=0; a.volume=0;
-  a.play().then(()=>ramp(a,VOL,FADE)).catch(()=>{
+  if(key==="news"){ capIdx=-2; newsStart(a); }
+  a.play().then(()=>ramp(a,VOL, key==="news"?400:FADE)).catch(()=>{
     if(key==="news") toast("뉴스 파일(bgm/news.mp3)이 아직 없습니다.");
     else toast("음악을 재생하지 못했습니다. 화면을 한 번 더 눌러주세요.");
   });
@@ -152,6 +295,9 @@ function go(i){
   setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
     tw.classList.remove("out"); }, 900);
   stage.classList.toggle("dim",!!s.dim);
+  if(stage.classList.contains("news") && !s.news) newsStop();
+  stage.classList.toggle("news",!!s.news);
+  if(s.news) setHeadline(0,true);
   playTrack(s.track);
   // 다음 곡 미리 받아두기 (재생 중인 플레이어는 건드리지 않음)
   const n=SCENES[i+1]; if(n&&n.track&&n.track!=="news"){ pre.src=src(n.track); pre.load(); }
@@ -187,6 +333,38 @@ async function keepAwake(){
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&started) keepAwake(); });
 
 let tt; function toast(m){const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),3200);}
+
+
+/* ---------- 자막 맞추기 (주소 끝에 #sync) ---------- */
+if(location.hash==="#sync"){
+  const box=$("sync"); box.hidden=false; $("start").classList.add("gone");
+  let k=-1, voice=null; const marks=[];
+  const show=()=>{
+    if(k<0){ box.innerHTML="<b>자막 맞추기</b><br>화면을 누르면 뉴스가 처음부터 나옵니다. 앵커가 아래 문장을 <b>말하기 시작하는 순간</b>마다 화면을 누르세요.<br><br>첫 문장: "+CAPTIONS[0][2]; return; }
+    if(k<CAPTIONS.length) box.innerHTML=`<b>${k+1} / ${CAPTIONS.length}</b> 이 문장이 시작되면 누르세요<br>${CAPTIONS[k][2]}`;
+  };
+  const finish=()=>{
+    const out=CAPTIONS.map((c,i)=>{ const st=marks[i]; const en= i+1<marks.length? marks[i+1]-0.1 : st+(c[1]-c[0]); return [Math.round(st*10)/10, Math.round(en*10)/10]; });
+    localStorage.setItem("cube_caps",JSON.stringify(out));
+    const code=out.map((v,i)=>`  [${v[0].toFixed(1)}, ${v[1].toFixed(1)}, "${CAPTIONS[i][2]}"]`).join(",\n");
+    box.innerHTML=`<b>저장했습니다.</b> 이 태블릿에서는 이제 이 시간으로 자막이 나옵니다. 다른 기기에도 쓰려면 아래 내용을 index.html의 CAPTIONS에 붙여넣으세요.<textarea readonly>${code}</textarea>
+      <div class="row"><button id="sAgain">다시 맞추기</button><button id="sReset">원래대로 되돌리기</button><button id="sDone">끝내기</button></div>`;
+    $("sAgain").onclick=e=>{e.stopPropagation(); location.reload();};
+    $("sReset").onclick=e=>{e.stopPropagation(); localStorage.removeItem("cube_caps"); toast("원래 시간으로 되돌렸습니다."); };
+    $("sDone").onclick=e=>{e.stopPropagation(); location.hash=""; location.reload();};
+  };
+  const onTap=e=>{
+    e.stopImmediatePropagation(); e.preventDefault();
+    if(k>=CAPTIONS.length) return;
+    if(k<0){ started=true; go(1); k=0; show(); voice=A.find(x=>x._key==="news");
+      if(voice) voice.addEventListener("ended",()=>{ if(k>=marks.length&&marks.length) {} }); return; }
+    if(!voice) voice=A.find(x=>x._key==="news");
+    marks[k]=Math.max(0,voice.currentTime-0.15); k++;
+    if(k>=CAPTIONS.length) finish(); else show();
+  };
+  ["zNext","zPrev"].forEach(id=>$(id).addEventListener("click",onTap,true));
+  show();
+}
 
 /* ---------- 반딧불이 ---------- */
 (function(){
