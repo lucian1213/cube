@@ -8,7 +8,7 @@
 <title>큐브관 살인사건 전말</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 :root{
@@ -142,6 +142,24 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   opacity:0;transition:opacity 4s ease 7s}
 #letter .endcard.on .ttl{opacity:1;transform:none}
 #letter .endcard.on .fin{opacity:1}
+.pst{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.6s ease}
+.stage.poster .pst{opacity:1}
+.stage.poster .art{filter:saturate(.95) brightness(.86)}
+.stage.poster .veil{background:linear-gradient(90deg,rgba(6,10,22,.55) 0%,rgba(6,10,22,0) 38%),
+  linear-gradient(0deg,rgba(6,10,22,.82) 0%,rgba(6,10,22,0) 42%),linear-gradient(180deg,rgba(6,10,22,.5) 0%,rgba(6,10,22,0) 25%)}
+.stage.poster .brand,.stage.poster .title-wrap{opacity:0}
+.pst .tag{position:absolute;left:4.2vw;top:calc(env(safe-area-inset-top,0px) + 6vh);color:#f2f4fa}
+.pst .tag .ko{font-weight:700;font-size:clamp(16px,2.05vw,30px);line-height:1.6;letter-spacing:.14em;text-shadow:0 2px 14px rgba(0,0,0,.7)}
+.pst .tag .en{margin-top:1.6vh;font-family:"Bodoni Moda",serif;font-size:clamp(9px,.82vw,13px);letter-spacing:.32em;line-height:1.9;color:#c9d1e4;opacity:.9}
+.pst .ttl{position:absolute;right:4.2vw;bottom:calc(env(safe-area-inset-bottom,0px) + 6.5vh);text-align:right}
+.pst .ttl .k1{font-weight:800;color:#d9c440;font-size:clamp(46px,8.2vw,150px);line-height:1;letter-spacing:.02em;text-shadow:0 4px 30px rgba(0,0,0,.55)}
+.pst .ttl .k2{font-weight:800;color:#d9c440;font-size:clamp(28px,4.9vw,90px);line-height:1.15;margin-top:.5vh;text-shadow:0 4px 30px rgba(0,0,0,.55)}
+.pst .ttl .en{margin-top:2.2vh;font-family:"Bodoni Moda",serif;font-weight:500;color:#f2f4fa;font-size:clamp(20px,3.3vw,62px);letter-spacing:.015em;line-height:1;text-shadow:0 3px 20px rgba(0,0,0,.6)}
+.pst .vert{position:absolute;top:50%;right:1.5vw;transform:translateY(-50%);writing-mode:vertical-rl;font-family:"Bodoni Moda",serif;
+  font-size:clamp(9px,.75vw,12px);letter-spacing:.9em;color:#c9d1e4;opacity:.55}
+.pst .vert.l{right:auto;left:1.5vw;transform:translateY(-50%) rotate(180deg)}
+.stage.poster .start{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 4vh);left:50%;transform:translateX(-50%);font-size:clamp(13px,1.2vw,17px);
+  background:rgba(6,10,22,.4);padding:10px 18px;letter-spacing:.2em}
 .sync{font-family:var(--sans);position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 9vh);transform:translateX(-50%);z-index:7;
   width:min(86vw,980px);padding:16px 20px;border-radius:12px;background:rgba(8,13,28,.94);border:1px solid var(--firefly);
   font-size:clamp(14px,1.6vw,20px);line-height:1.6;pointer-events:none}
@@ -154,12 +172,18 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 </style>
 </head>
 <body>
-<div class="stage" id="stage">
+<div class="stage poster" id="stage">
   <div class="art"></div>
   <div class="newsart"></div>
   <canvas id="flies"></canvas>
   <div class="veil"></div>
   <div class="brand">큐브관 살인사건 전말<small>MURDER IN THE CUBE</small></div>
+  <div class="pst" aria-hidden="true">
+    <div class="tag"><div class="ko">별 하나로 만든 총알,<br>큐브관을 향해 쏘다.</div>
+      <div class="en">WITH A BULLET MADE OF<br>STARS, SHOOT AT THE CUBE</div></div>
+    <div class="ttl"><div class="k1">큐브관</div><div class="k2">살인사건 전말</div><div class="en">MURDER IN THE CUBE</div></div>
+    <div class="vert">MURDER IN THE CUBE</div><div class="vert l">MURDER IN THE CUBE</div>
+  </div>
   <div class="title-wrap" id="titleWrap">
     <div class="t scene-num" id="sceneNum"></div>
     <div class="t scene-title" id="sceneTitle">큐브관 살인사건 전말</div>
@@ -199,14 +223,15 @@ canvas#flies{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 </div>
 
 <script>
-console.info('큐브관 진행 화면 v2026-10-05-11 (지구 한 장으로 멀어지기)');
+console.info('큐브관 진행 화면 v2026-10-06-12 (포스터 대기 화면)');
 /* 음원은 bgm 폴더에 같은 이름으로 넣어두세요. news.mp3는 녹음 후 추가. */
 const SCENES = [
 {
 "num": "",
 "title": "큐브관 살인사건 전말",
 "sub": "",
-"track": "flight"
+"track": "flight",
+"poster": true
 },
 {
 "num": "",
@@ -800,6 +825,7 @@ function go(i,atEnd){
   if(!s.answer) setTimeout(()=>{ $("sceneNum").textContent=s.num; $("sceneTitle").textContent=s.title; $("sceneSub").textContent=s.sub;
     tw.classList.remove("out"); }, 900);
   stage.classList.toggle("dim",!!s.dim);
+  stage.classList.toggle("poster",!!s.poster);
   stage.classList.toggle("answer",!!s.answer);
   if(s.answer) showAnswer(s,atEnd);
   if(stage.classList.contains("news") && !s.news) newsStop();
